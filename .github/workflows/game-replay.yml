@@ -1,0 +1,22 @@
+# Rebuild all XP, quests and ability scores from the full event history
+# under the active rules version. Run it after publishing a new rules
+# version (see docs/rules-engine.md). Normal rescoring happens in the
+# Liftosaur sync workflow every 2 hours.
+name: Replay game
+
+on:
+  workflow_dispatch:
+
+concurrency: liftosaur-sync
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install psql
+        run: sudo apt-get update -q && sudo apt-get install -yq postgresql-client
+      - name: Replay
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -c "select 'replayed ' || game.replay_all() || ' user(s)'"

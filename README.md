@@ -34,6 +34,7 @@ scripts/
 docs/
   database.md   Setting up the Supabase database and applying migrations
   liftosaur-sync.md  Connecting Liftosaur and how the workout sync works
+  rules-engine.md    How XP, quests and ability scores are computed
   schema.md     Table-by-table notes for review
   usda-loader.md  How the USDA loader works
 ```
