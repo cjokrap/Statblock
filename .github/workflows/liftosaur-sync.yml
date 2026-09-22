@@ -1,4 +1,5 @@
-# Pull workout history from Liftosaur into Statblock events every 2 hours.
+# Pull workout history from Liftosaur into Statblock events every 2 hours,
+# then rescore the last 21 days (XP, quests, ability scores) for everyone.
 # The first sync of a connected account loads its whole history; later ones
 # re-check the last 21 days, which also picks up edits and deletions.
 # See docs/liftosaur-sync.md.
@@ -32,3 +33,9 @@ jobs:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
           FULL: ${{ inputs.full_resync && '--full' || '' }}
         run: scripts/liftosaur/sync.py $FULL
+      - name: Update XP, quests and stats
+        # Runs even if one account's sync failed, so everyone else is scored.
+        if: success() || failure()
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -At -c "select 'rescored ' || game.recompute_recent(21) || ' user(s)'"

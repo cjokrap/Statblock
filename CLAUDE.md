@@ -82,7 +82,9 @@ steps are in `docs/database.md`.
   `user_settings` row, and `settings_for(user, day)` returns the row in force.
   Past days keep the targets they were scored against.
 - Game output (`xp_ledger`, `stat_snapshots`, `quest_progress`) is written by
-  the server (service role) only. Clients read it.
+  the server (service role) only, through `game.recompute()`. Clients read
+  it. After logging, the app should call `game.recompute(user, today, today)`
+  server-side.
 - RLS is on for every table. New tables need policies in the same migration.
 - USDA foods are never deleted. A food missing from a new release gets
   `retired_at`, which hides it from search while old logs still point at it.
@@ -118,8 +120,9 @@ The script applies `00_local_supabase_stubs.sql` (stand-ins for Supabase's
 auth, storage and vault), then every migration, then
 `10_schema_behavior.sql`, then the USDA loader tests (`20_usda_loader.sh`, on a
 second fresh database), then the migration runner tests (`30_migrate.sh`), then the Liftosaur parser unit
-tests and sync tests (`40_liftosaur_sync.sh`, against a fake Liftosaur API). All
-asserts must pass. Add tests there for new
+tests and sync tests (`40_liftosaur_sync.sh`, against a fake Liftosaur API), then
+the rules engine scenario (`50_rules_engine.sql`, three made-up weeks scored by
+hand). All asserts must pass. Add tests there for new
 behavior.
 
 ## Next steps
@@ -138,9 +141,12 @@ behavior.
    in the `workout_prs` view. The first sync imported 74 workouts. After
    changing tier parsing, run the workflow with **full resync** so older
    workouts are re-tagged.
-3. **Rules engine:** events plus the active rules version produce
-   `xp_ledger`, `stat_snapshots` and `quest_progress`. Must be replayable.
-   Test it against made-up weeks of data.
+3. **Rules engine:** built (`game` schema, `docs/rules-engine.md`). The
+   Liftosaur sync workflow rescores the last 21 days every 2 hours, and the
+   **Replay game** workflow rebuilds everything after a rules change. Food
+   judging starts with Charles's first `user_settings` row, so don't insert
+   one until he can log food in the app, or every day will count as
+   unlogged. Not yet built: loot drops, achievements, streaks.
 4. **Next.js app:** dashboard, food logging, settings, first-run setup, then
    the Liftosaur connect screen. Follow the mockup. Food search should fall
    back to a live FDC API lookup for packaged foods, saving only what gets

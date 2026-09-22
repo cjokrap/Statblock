@@ -25,3 +25,6 @@ PGDATABASE="${DB}_migrate" supabase/tests/30_migrate.sh
 python3 -m unittest discover -s scripts/liftosaur -q
 fresh_db "${DB}_liftosaur"
 PGDATABASE="${DB}_liftosaur" supabase/tests/40_liftosaur_sync.sh
+
+fresh_db "${DB}_game"
+psql -v ON_ERROR_STOP=1 -q -d "${DB}_game" -f supabase/tests/50_rules_engine.sql

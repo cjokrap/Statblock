@@ -1,10 +1,10 @@
 # Statblock schema: review notes
 
-Eleven migrations in `supabase/migrations`, applied in filename order. All of
+Twelve migrations in `supabase/migrations`, applied in filename order. All of
 them run clean on Postgres 16, and `supabase/tests/run_local.sh` runs 50
 behavior checks (RLS isolation, effective-dated settings, append-only events,
-voids, dedupe, levels, DRIs), then the USDA loader, migration runner and
-Liftosaur sync tests.
+voids, dedupe, levels, DRIs), then the USDA loader, migration runner,
+Liftosaur sync and rules engine tests.
 
 ## Design rules
 
@@ -34,6 +34,7 @@ Liftosaur sync tests.
 | Foods | `foods`, `food_nutrients`, `food_portions`, `off_products` | USDA and custom foods share `foods`; `source_rank` puts whole foods first. USDA foods dropped from a release get `retired_at` and leave search. Open Food Facts kept separate (ODbL). FatSecret results are not stored. |
 | USDA loader | `usda.stage_*`, `usda.nutrient_aliases`, `usda.load_runs` | Server-only schema. See `docs/usda-loader.md`. |
 | Liftosaur sync | `liftosaur.stage_records`, `liftosaur.apply_records()`, `workout_prs` view | Server-only schema, plus a client-readable PR view. See `docs/liftosaur-sync.md`. |
+| Rules engine | `game.recompute()`, `game.replay()`, `game.day_facts()`, `game.scores()` | Server-only functions that write `xp_ledger`, `quest_progress` and `stat_snapshots`. See `docs/rules-engine.md`. |
 | Supplements | `supplements`, `supplement_nutrients`, `daily_stack_items` | DSLD (CC0) plus custom. |
 | Events | `events` + 9 detail tables, `recovery_periods`, `self_care_categories` | Logging goes through `log_food`, `log_water`, `log_stack`, `log_weigh_in`, `log_self_care`, `log_activity`, `log_skip`, `end_recovery`, `void_event`. |
 | Game | `tracks`, `rules_versions`, `rules_config`, `xp_ledger`, `stat_snapshots`, `quest_definitions`, `quest_progress`, loot and achievement tables | Rules v1 seeded from the design doc. Levels use D&D 5e thresholds divided by 10. |
