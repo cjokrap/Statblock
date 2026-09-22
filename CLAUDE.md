@@ -125,6 +125,9 @@ the rules engine scenario (`50_rules_engine.sql`, three made-up weeks scored by
 hand). All asserts must pass. Add tests there for new
 behavior.
 
+For the app: `cd web && npm run lint && npm run typecheck && npm test && npm run build`
+(CI runs the same in `.github/workflows/web.yml`).
+
 ## Next steps
 
 1. **USDA loader:** built (`scripts/usda/load.sh`, `docs/usda-loader.md`,
@@ -147,10 +150,13 @@ behavior.
    judging starts with Charles's first `user_settings` row, so don't insert
    one until he can log food in the app, or every day will count as
    unlogged. Not yet built: loot drops, achievements, streaks.
-4. **Next.js app:** dashboard, food logging, settings, first-run setup, then
-   the Liftosaur connect screen. Follow the mockup. Food search should fall
-   back to a live FDC API lookup for packaged foods, saving only what gets
-   logged.
+4. **Next.js app (in progress):** lives in `web/` (Next.js 16: middleware is
+   now `proxy.ts`, and request APIs are async only; read
+   `web/node_modules/next/dist/docs/` before framework-level changes). It's
+   built in small PRs tracked in **`docs/app-plan.md`**: check that file's
+   status table first when resuming, and update it when a PR merges. Follow
+   the mockup. Food search should fall back to a live FDC API lookup for
+   packaged foods, saving only what gets logged.
 
 ## Later (not v1)
 

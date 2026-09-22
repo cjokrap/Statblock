@@ -30,7 +30,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install psql
         run: sudo apt-get update -q && sudo apt-get install -yq postgresql-client
       - name: Load

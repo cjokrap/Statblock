@@ -1,0 +1,61 @@
+/* Statblock theme: parchment, ink and a few accents, from the mockup. */
+:root {
+  --parchment: #f3ede2;
+  --card: #fbf8f2;
+  --border: #ddd2bf;
+  --divider: #eae2d3;
+  --ink: #1f1b16;
+  --muted: #5e554a;
+  --red: #8e3326;
+  --red-dark: #6e251b;
+  --red-tint: #f6e7e3;
+  --teal: #2d5a5e;
+  --gold: #d9a441;
+  --green: #35602f;
+  --sheet: #1f1b16;
+  --sheet-muted: #cfc5b4;
+  --sheet-track: #3a332a;
+  --font-display: var(--font-cinzel), Georgia, serif;
+  --font-body: var(--font-source-sans), system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--red);
+}
+a:hover {
+  color: var(--red-dark);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
