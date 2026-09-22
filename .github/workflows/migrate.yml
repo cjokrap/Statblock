@@ -1,0 +1,39 @@
+# Apply pending migrations in supabase/migrations to the Supabase database.
+# Run it by hand from the Actions tab after merging a PR that adds a
+# migration. Tick "dry run" to only list what would be applied.
+#
+# Secret SUPABASE_DB_URL: the Supabase session pooler connection string
+# (port 5432), the same one the USDA sync uses.
+name: Migrate database
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only list pending migrations, don't apply them
+        type: boolean
+        default: false
+
+concurrency: migrate-database
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update -q && sudo apt-get install -yq postgresql-client
+      - name: Check the secret is set
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [[ -z "$DATABASE_URL" ]]; then
+            echo "::error::Repo secret SUPABASE_DB_URL is not set. See docs/database.md."
+            exit 1
+          fi
+      - name: Migrate
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: scripts/db/migrate.sh $DRY_RUN

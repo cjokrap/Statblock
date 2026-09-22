@@ -28,8 +28,10 @@ supabase/
   migrations/   SQL migrations, applied in filename order
   tests/        SQL tests (RLS isolation, effective-dated settings, USDA loader)
 scripts/
+  db/           Migration runner (used by the Migrate database workflow)
   usda/         USDA FoodData Central loader
 docs/
+  database.md   Setting up the Supabase database and applying migrations
   schema.md     Table-by-table notes for review
   usda-loader.md  How the USDA loader works
 ```

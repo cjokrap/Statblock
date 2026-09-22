@@ -1,7 +1,8 @@
 # USDA loader
 
 Loads USDA FoodData Central (public domain) CSV releases into `foods`,
-`food_nutrients` and `food_portions`.
+`food_nutrients` and `food_portions`. The database must be migrated first
+(see `docs/database.md`).
 
 ```
 DATABASE_URL=postgres://... scripts/usda/load.sh <release.zip | URL | unzipped dir>

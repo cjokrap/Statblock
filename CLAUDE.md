@@ -21,7 +21,11 @@ Both links are Charles's private artifacts; read them with the Artifact tool.
 ## Stack
 
 Next.js on Vercel. Supabase for Postgres, Auth, Storage and scheduled jobs.
-Migrations live in `supabase/migrations` and run in filename order.
+Migrations live in `supabase/migrations` and run in filename order. They reach
+Supabase through the manual **Migrate database** GitHub workflow
+(`scripts/db/migrate.sh`). A new migration needs a timestamp newer than every
+existing one. After merging one, remind Charles to run the workflow. Setup
+steps are in `docs/database.md`.
 
 ## Principles (don't break these)
 
@@ -113,15 +117,17 @@ PGHOST=... PGPORT=... PGUSER=postgres supabase/tests/run_local.sh
 The script applies `00_local_supabase_stubs.sql` (stand-ins for Supabase's
 auth, storage and vault), then every migration, then
 `10_schema_behavior.sql`, then the USDA loader tests (`20_usda_loader.sh`, on a
-second fresh database). All asserts must pass. Add tests there for new
+second fresh database), then the migration runner tests (`30_migrate.sh`). All
+asserts must pass. Add tests there for new
 behavior.
 
 ## Next steps
 
 1. **USDA loader:** built (`scripts/usda/load.sh`, `docs/usda-loader.md`,
-   monthly `.github/workflows/usda-sync.yml`). To do: set the
-   `SUPABASE_DB_URL` secret, run the first loads, and check Branded fits the
-   database plan.
+   monthly `.github/workflows/usda-sync.yml`). To do (in order, see
+   `docs/database.md`): set the `SUPABASE_DB_URL` secret, run the Migrate
+   database workflow on the empty database, then run the first USDA loads.
+   Check that Branded fits the database plan.
 2. **Liftosaur sync:** a scheduled job that pulls `/api/v1/history`
    incrementally (`integrations.sync_cursor`) and parses Liftoscript records
    into `workout_session` and `workout_set` events. Dedupe on `source_ref`.
