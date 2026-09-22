@@ -36,7 +36,7 @@ view it again.
 
 1. On GitHub, open the **Actions** tab.
 2. Pick **Migrate database** from the list on the left.
-3. Click **Run workflow** (on the right), leave "dry run" unticked, then
+3. Click **Run workflow** (on the right), leave the mode on **apply**, then
    click the green **Run workflow** button.
 4. Click the run when it appears. It lists each migration as it applies it
    and ends with `Applied 10 migration(s).` A green check means it worked.
@@ -46,6 +46,12 @@ To check, run this in the Supabase **SQL Editor**:
 ```sql
 select count(*) from public.nutrients;   -- 29
 ```
+
+**Already built the tables by pasting migrations into the SQL Editor?** Run
+the workflow once with mode **baseline** instead. It records the migrations
+as applied without running them again. After that, use **apply** as normal.
+If you run **apply** on a database built by hand, it stops before changing
+anything and tells you to baseline.
 
 ### 4. Load USDA foods
 
@@ -60,7 +66,9 @@ Go to **Actions → USDA sync → Run workflow**. See `docs/usda-loader.md`.
 
 ## How it works
 
-`scripts/db/migrate.sh` (with `--dry-run` to only list pending files):
+`scripts/db/migrate.sh` (`--dry-run` only lists pending files; `--baseline`
+records every file as applied without running it, only while history is
+empty and the database has tables):
 
 - **Each file runs in its own transaction.** The file and its history row
   commit together. If a migration fails, the database is left exactly as it
@@ -75,4 +83,5 @@ Go to **Actions → USDA sync → Run workflow**. See `docs/usda-loader.md`.
   newer timestamp.
 - **Tests:** `supabase/tests/run_local.sh` builds its test databases with this
   script. `30_migrate.sh` also tests dry runs, re-runs, rollback of a
-  failing migration, and the out-of-order check.
+  failing migration, the out-of-order check, and baselining a database
+  built by hand.

@@ -38,4 +38,17 @@ echo 'select 1;' > supabase/migrations/00000101000000_test_old.sql
 scripts/db/migrate.sh > /dev/null 2>&1 && fail "an out-of-order migration should be refused"
 rm -f supabase/migrations/00000101000000_test_old.sql
 
+# A database built by hand (tables, no history) is refused until baselined.
+psql -X -q -c "truncate supabase_migrations.schema_migrations"
+out=$(scripts/db/migrate.sh 2>&1) && fail "tables without history should be refused"
+[[ $out == *"--baseline"* ]] || fail "refusal should point to --baseline"
+scripts/db/migrate.sh --baseline > /dev/null
+[[ $(count) -eq $total ]] || fail "baseline should record every migration"
+[[ $(scripts/db/migrate.sh) == "Database is up to date"* ]] || fail "baselined database should be up to date"
+scripts/db/migrate.sh --baseline > /dev/null 2>&1 && fail "baseline should refuse when history exists"
+
+# Baseline refuses an empty database.
+psql -X -q -c "truncate supabase_migrations.schema_migrations" -c "drop schema public cascade" -c "create schema public"
+scripts/db/migrate.sh --baseline > /dev/null 2>&1 && fail "baseline should refuse an empty database"
+
 echo "all migrate tests passed"

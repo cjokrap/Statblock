@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Apply pending migrations in supabase/migrations, oldest first.
 #
-# Usage: scripts/db/migrate.sh [--dry-run]
-#   --dry-run  list pending migrations without applying them
+# Usage: scripts/db/migrate.sh [--dry-run | --baseline]
+#   --dry-run   list pending migrations without applying them
+#   --baseline  record every migration as applied without running it, for a
+#               database that was built by hand (SQL Editor) before this
+#               script kept history. Only allowed while history is empty.
 #
 # Each migration runs in its own transaction together with its history row,
 # so a failure leaves the database as it was before that file. History lives
@@ -13,11 +16,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-dry_run=false
+dry_run=false baseline=false
 case ${1:-} in
   --dry-run) dry_run=true ;;
+  --baseline) baseline=true ;;
   "") ;;
-  *) sed -n '2,12p' "$0" >&2; exit 2 ;;
+  *) sed -n '2,15p' "$0" >&2; exit 2 ;;
 esac
 
 psql=(psql -X -q -v ON_ERROR_STOP=1)
@@ -34,6 +38,35 @@ create table if not exists supabase_migrations.schema_migrations (
 SQL
 
 applied=$("${psql[@]}" -At -c "select version from supabase_migrations.schema_migrations order by version")
+public_tables=$("${psql[@]}" -At -c "select count(*) from pg_tables where schemaname = 'public'")
+
+if $baseline; then
+  if [[ -n $applied ]]; then
+    echo "error: migration history already has entries; --baseline is only for a database with none." >&2
+    exit 1
+  fi
+  if [[ $public_tables -eq 0 ]]; then
+    echo "error: the database has no tables, so there is nothing to baseline. Run without --baseline." >&2
+    exit 1
+  fi
+  echo "Recording as applied (not running them):"
+  for f in supabase/migrations/*.sql; do
+    file=$(basename "$f" .sql)
+    echo "  $file"
+    "${psql[@]}" -v version="${file%%_*}" -v name="${file#*_}" \
+      <<< "insert into supabase_migrations.schema_migrations (version, name) values (:'version', :'name');"
+  done
+  exit 0
+fi
+
+# Tables but no history means the schema was built some other way. Running
+# every migration again would fail, so stop and explain.
+if [[ -z $applied && $public_tables -gt 0 ]]; then
+  echo "error: the database already has tables but no migration history." >&2
+  echo "If it was built by running these migrations by hand, record them once with --baseline" >&2
+  echo "(the workflow's \"baseline\" option). See docs/database.md." >&2
+  exit 1
+fi
 latest=$(tail -n1 <<< "$applied")
 
 pending=()
