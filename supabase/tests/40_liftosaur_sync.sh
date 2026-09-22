@@ -101,6 +101,26 @@ check "
   assert exists (select 1 from live_events where source_ref like 'lft:1757960000000@%~1'), 'revision suffix';
 "
 
+# v4: the program now makes Day 1 squat T2. A normal sync re-tags the Day 1
+# workouts inside the window; --full re-checks the whole history, which also
+# voids the August record deleted back in v2.
+cp $fx/state_v4.json "$work/state.json"
+out=$(scripts/liftosaur/sync.py 2>&1) || { echo "FAIL: v4 sync: $out" >&2; exit 1; }
+[[ $out == *"0 new, 2 edited, 0 removed, 1 unchanged"* ]] || { echo "FAIL: v4 sync output: $out" >&2; exit 1; }
+check "
+  assert (select string_agg(distinct s.tier, ',') from workout_sets s join live_events e on e.id = s.event_id
+          join workout_sessions ws on ws.event_id = s.session_event_id
+          where ws.external_id = '1757870000000' and s.exercise = 'Squat') = 'T2', 'day 1 squat re-tagged T2';
+"
+out=$(scripts/liftosaur/sync.py --full 2>&1) || { echo "FAIL: full resync: $out" >&2; exit 1; }
+[[ $out == *"3 workouts in Liftosaur (full history); 0 new, 0 edited, 1 removed, 3 unchanged"* ]] ||
+  { echo "FAIL: full resync output: $out" >&2; exit 1; }
+check "
+  assert not exists (select 1 from live_events e join workout_sessions ws on ws.event_id = e.id
+                     where ws.external_id = '1754000000000'), 'full resync voids records deleted long ago';
+  assert (select count(*) from live_events where user_id = '$A' and type = 'workout_session') = 3, 'three live sessions';
+"
+
 # Clients can read their own workouts and PRs but not the staging schema or others' data.
 psql -X -q -v ON_ERROR_STOP=1 <<SQL
 set role authenticated;

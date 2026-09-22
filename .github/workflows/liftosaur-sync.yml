@@ -11,6 +11,11 @@ on:
   schedule:
     - cron: "17 */2 * * *"
   workflow_dispatch:
+    inputs:
+      full_resync:
+        description: Re-check the whole history, not just the last 21 days
+        type: boolean
+        default: false
 
 concurrency: liftosaur-sync
 
@@ -25,4 +30,5 @@ jobs:
       - name: Sync
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: scripts/liftosaur/sync.py
+          FULL: ${{ inputs.full_resync && '--full' || '' }}
+        run: scripts/liftosaur/sync.py $FULL

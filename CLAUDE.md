@@ -132,10 +132,12 @@ behavior.
    of a since-fixed parsing bug).
 2. **Liftosaur sync:** built (`scripts/liftosaur/sync.py`,
    `docs/liftosaur-sync.md`, `.github/workflows/liftosaur-sync.yml`, every 2
-   hours). GZCL tiers come from the program's `t1:`/`t2:`/`t3:` labels,
-   because history records don't carry them. PRs are in the
-   `workout_prs` view. To do: create Charles's auth user, store his key
-   with `set_liftosaur_key`, and run the first sync (steps in the doc).
+   hours). Charles runs **The Rippler** (12 weeks, lifts written once in
+   Week 1 as `t1: Squat[1-12]`). GZCL tiers come from the program's labels
+   or `...tN` templates, because history records don't carry them. PRs are
+   in the `workout_prs` view. The first sync imported 74 workouts. After
+   changing tier parsing, run the workflow with **full resync** so older
+   workouts are re-tagged.
 3. **Rules engine:** events plus the active rules version produce
    `xp_ledger`, `stat_snapshots` and `quest_progress`. Must be replayable.
    Test it against made-up weeks of data.

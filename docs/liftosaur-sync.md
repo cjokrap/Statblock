@@ -54,15 +54,35 @@ integration with status `connected`:
 4. **Tags GZCL tiers.** History records don't carry tiers, so the sync
    reads the program the workout came from (`GET /api/v1/programs/:id`)
    and matches the day and exercise. The day comes from `week` +
-   `dayName`/`dayInWeek`, or `day` for single-week programs like GZCLP. A
-   lift labelled `t1:`, `t2:` or `t3:` in that day gets that tier, so
-   Squat can be T1 one day and T2 another. Unlabelled lifts get no tier
-   and score under `untiered` in the rules.
+   `dayName`/`dayInWeek`, or `day` for single-week programs like GZCLP.
+   Liftosaur's GZCL programs mark tiers three ways, and all three work:
+
+   | Style | Example | Used by |
+   | --- | --- | --- |
+   | Tier label | `t1: Squat / ...t1` | GZCLP, VDIP |
+   | Label + `[order,weeks]` | `t1: Bench Press[1-12] / ...t1` | The Rippler, General Gainz |
+   | Template name only | `Squat[1,1-12] / ...t1` | Jacked & Tan |
+
+   - **Week ranges:** the `[...]` part is ignored when matching names.
+   - **Programs written once in Week 1** (like The Rippler, whose Weeks 2–12
+     are empty days): a lift the workout's own week doesn't list is looked
+     up on the same day in the other weeks.
+   - **Per-day tiers:** tiers follow the day, so Incline Bench Press is T2 on
+     Rippler Day 1 and T3 on Day 3.
+   - **Ignored lines:** template definitions (`t1 / used: none / ...`) and
+     `{~ ~}` script blocks.
+   - **Unlabelled lifts:** they get no tier and score under `untiered` in
+     the rules.
+
+   The parser was checked against every built-in GZCL program in
+   Liftosaur's source.
 5. **Applies the batch.** `liftosaur.apply_records()` runs in one
    transaction per user:
    - **New record:** events are inserted. `source_ref` is
-     `lft:<record id>@<text hash>`, plus `:<set index>` for sets.
-   - **Unchanged record:** skipped (same id and hash).
+     `lft:<record id>@<fingerprint>`, plus `:<set index>` for sets. The
+     fingerprint hashes the record text together with the parsed sets and
+     tiers.
+   - **Unchanged record:** skipped (same id and fingerprint).
    - **Edited record:** the old session and sets are voided and the new
      version is inserted.
    - **Deleted record:** a synced workout inside the fetched window that
@@ -76,10 +96,20 @@ integration with status `connected`:
 
 The run fails (red in Actions) if any account failed.
 
+## Full resync
+
+Run **Actions → Liftosaur sync → Run workflow** with **full resync**
+ticked (or `sync.py --full`) to re-check the whole history instead of the
+last 21 days:
+- **Changed workouts are rewritten.** That covers anything whose parsed sets
+  or tiers differ, from a parser fix or a restructured program. The old
+  version is voided.
+- **Unchanged workouts are skipped.**
+- **Deleted workouts are voided,** even ones older than 21 days.
+
 **Known limit:** tiers come from the program as it is now. If you
-restructure a program, older workouts are tagged by the new layout. Their
-tiers only change if those workouts are re-synced, which happens only
-inside the 21-day window.
+restructure a program, a full resync re-tags older workouts by the new
+layout.
 
 ## PRs
 

@@ -9,8 +9,8 @@ History records ("Liftoscript Workouts") come from GET /api/v1/history:
 
 Grammar: src/liftohistory/liftohistory.grammar in github.com/astashov/liftosaur.
 
-History records don't say which GZCL tier a lift was. Programs do, as exercise
-labels ("t1: Squat / ..."), so tiers come from the program text
+History records don't say which GZCL tier a lift was. Programs do (see
+"Programs" below), so tiers come from the program text
 (GET /api/v1/programs/:id) matched by week and day.
 """
 import re
@@ -120,14 +120,37 @@ def parse_record(text):
 
 
 # ---------------------------------------------------------------------------
-# Programs: GZCL tiers from exercise labels
+# Programs: GZCL tiers from exercise labels and templates
 # ---------------------------------------------------------------------------
-TIER_LABEL = re.compile(r"^t([123])[a-z0-9_]*$", re.I)
-LABELED_EXERCISE = re.compile(r"^([A-Za-z_]\w*)\s*:\s*([^/]+?)\s*(?:/|$)")
+# Liftosaur's GZCL programs mark tiers three ways:
+#   t1: Squat / ...t1                  a tier label (GZCLP, VDIP)
+#   t1: Bench Press[1-12] / ...t1      a label plus [order,weeks] (The Rippler)
+#   Squat[1,1-12] / ...t1              no label; the reused template's name
+#                                      carries the tier (Jacked & Tan)
+# Template definitions ("t1 / used: none / ...") and {~ ~} script blocks
+# aren't exercises and are skipped.
+TIER_NAME = re.compile(r"^t([123])(?![0-9])[a-z0-9_]*$", re.I)
+TEMPLATE_TIER = re.compile(r"\.\.\.\s*t([123])(?![0-9])", re.I)
+EXERCISE_LINE = re.compile(r"^(?:([A-Za-z_]\w*)\s*:\s*)?([^/:{}]+?)\s*/")
+BRACKETS = re.compile(r"\[[^\]]*\]")
 
 
 def norm(name):
-    return " ".join(name.lower().split())
+    return " ".join(BRACKETS.sub("", name).lower().split())
+
+
+def line_tier(line):
+    """(exercise name, tier or None) for a program exercise line, or None."""
+    m = EXERCISE_LINE.match(line)
+    if not m or "used: none" in line:
+        return None
+    label, name = m.group(1), norm(m.group(2))
+    if not name:
+        return None
+    if label and TIER_NAME.match(label):
+        return name, "T" + TIER_NAME.match(label).group(1)
+    t = TEMPLATE_TIER.search(line)
+    return name, ("T" + t.group(1)) if t else None
 
 
 def program_tiers(text):
@@ -136,8 +159,14 @@ def program_tiers(text):
     Returns a list of weeks; each week is a list of (day name, {name: tier}).
     """
     weeks = []
+    in_script = False
     for raw in text.replace("\r\n", "\n").split("\n"):
         line = raw.strip()
+        if in_script:
+            in_script = "~}" not in line
+            continue
+        if "{~" in line and "~}" not in line.split("{~", 1)[1]:
+            in_script = True  # the exercise line itself still counts
         if line.startswith("## "):
             if not weeks:
                 weeks.append([])
@@ -145,30 +174,47 @@ def program_tiers(text):
         elif line.startswith("# "):
             weeks.append([])
         elif line and not line.startswith("//") and weeks and weeks[-1]:
-            m = LABELED_EXERCISE.match(line)
-            if m and TIER_LABEL.match(m.group(1)):
-                tier = "T" + TIER_LABEL.match(m.group(1)).group(1)
-                weeks[-1][-1][1].setdefault(norm(m.group(2)), tier)
+            found = line_tier(line)
+            if found and found[1]:
+                weeks[-1][-1][1].setdefault(found[0], found[1])
     return weeks
 
 
 def day_tiers(weeks, session):
-    """Find the program day a session came from; {} if it can't be found."""
+    """Tiers for the program day a session came from; {} if it can't be found.
+
+    Multi-week programs often list a lift once, in week 1, with a week range
+    ("Squat[1-12]"), so the same day in other weeks fills in whatever the
+    session's own week doesn't mention.
+    """
     if not weeks:
         return {}
-    if session.get("week") and session.get("day_in_week"):
-        w = session["week"]
-        week = weeks[w - 1] if w <= len(weeks) else weeks[0]
+
+    def find(week, day_name, day_in_week):
         for name, tiers in week:  # a day's name is the surest match
-            if session.get("day_name") and name == session["day_name"]:
+            if day_name and name == day_name:
                 return tiers
-        d = session["day_in_week"]
-        return week[d - 1][1] if d <= len(week) else {}
-    if session.get("day"):
-        days = [tiers for week in weeks for _, tiers in week]
-        d = session["day"]
-        return days[d - 1] if d <= len(days) else {}
-    return {}
+        return week[day_in_week - 1][1] if day_in_week and day_in_week <= len(week) else None
+
+    if session.get("week") and session.get("day_in_week"):
+        w, d, name = session["week"], session["day_in_week"], session.get("day_name")
+    elif session.get("day"):
+        # Single-week programs number days straight through.
+        days = [(wi, di) for wi, week in enumerate(weeks) for di in range(len(week))]
+        if session["day"] > len(days):
+            return {}
+        wi, di = days[session["day"] - 1]
+        w, d, name = wi + 1, di + 1, weeks[wi][di][0]
+    else:
+        return {}
+
+    merged = {}
+    others = [weeks[i] for i in range(len(weeks)) if i != w - 1]
+    for week in others:
+        merged.update({k: v for k, v in (find(week, name, d) or {}).items() if k not in merged})
+    if w <= len(weeks):
+        merged.update(find(weeks[w - 1], name, d) or {})
+    return merged
 
 
 def tier_for(tiers, exercise):

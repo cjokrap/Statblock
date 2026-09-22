@@ -11,6 +11,10 @@ For every connected Liftosaur integration:
      workouts, replaces edited ones and voids deleted ones, in one
      transaction per user.
 
+--full re-fetches the whole history even after the first sync. Records
+whose parsed sets changed (a parser fix, or a program restructured so
+tiers differ) are rewritten; unchanged ones are skipped.
+
 Connects to Postgres with psql (DATABASE_URL, or the PG* variables).
 LIFTOSAUR_API_BASE overrides the API URL (tests use a local fake).
 Exit status 1 if any user failed.
@@ -132,24 +136,28 @@ def stage_rows(records, programs):
         except liftohistory.ParseError as e:
             raise RuntimeError(f"history record {rec['id']}: {e}") from None
         tiers = liftohistory.day_tiers(programs.tiers(session["program"]), session)
+        sets = liftohistory.session_sets(session, tiers)
+        # The fingerprint covers the parsed sets, not just the text, so a
+        # parser fix or a program change that retags tiers rewrites the record.
+        fingerprint = hashlib.sha1((text + json.dumps(sets, sort_keys=True)).encode())
         yield [
             rec["id"],
-            hashlib.sha1(text.encode()).hexdigest()[:12],
+            fingerprint.hexdigest()[:12],
             session["occurred_at"].isoformat(),
             session["program"] or "",
             session["day_name"] or "",
             session["week"] or "",
             session["day_in_week"] or session["day"] or "",
             session["duration_s"] if session["duration_s"] is not None else "",
-            json.dumps(liftohistory.session_sets(session, tiers)),
+            json.dumps(sets),
         ]
 
 
-def sync_user(user_id, key, backfilled):
+def sync_user(user_id, key, backfilled, full=False):
     # LIFTOSAUR_SYNC_NOW pins the clock for tests.
     now = datetime.fromisoformat(os.environ["LIFTOSAUR_SYNC_NOW"]) if os.environ.get(
         "LIFTOSAUR_SYNC_NOW") else datetime.now(timezone.utc)
-    since = None if not backfilled else now - timedelta(days=WINDOW_DAYS)
+    since = None if full or not backfilled else now - timedelta(days=WINDOW_DAYS)
     records = fetch_history(key, since)
     programs = Programs(key)
     with tempfile.NamedTemporaryFile("w", suffix=".csv", newline="", delete=False) as f:
@@ -176,6 +184,7 @@ select * from liftosaur.apply_records(:'user', nullif(:'since', '')::timestamptz
 
 
 def main():
+    full = "--full" in sys.argv[1:]
     users = query("""
         select i.user_id, s.decrypted_secret, i.sync_cursor is not null
         from public.integrations i
@@ -190,7 +199,7 @@ def main():
         if os.environ.get("GITHUB_ACTIONS"):
             print(f"::add-mask::{key}")
         try:
-            sync_user(user_id, key, backfilled == "t")
+            sync_user(user_id, key, backfilled == "t", full)
             query("""update public.integrations
                      set last_synced_at = now(), sync_cursor = coalesce(sync_cursor, 'backfilled'),
                          last_error = null
