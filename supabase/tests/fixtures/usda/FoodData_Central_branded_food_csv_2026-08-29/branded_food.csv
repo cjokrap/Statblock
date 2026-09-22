@@ -1,0 +1,5 @@
+"fdc_id","brand_owner","brand_name","subbrand_name","gtin_upc","ingredients","not_a_significant_source_of","serving_size","serving_size_unit","household_serving_fulltext","branded_food_category","data_source","package_weight","modified_date","available_date","market_country","discontinued_date","preparation_state_code","trade_channel","short_description","material_code"
+"2000001","Example Dairy Co.","","","012345678905","Cultured nonfat milk","","170","g","3/4 cup","Yogurt","LI","","2026-07-01","2026-08-01","United States","","","",""," "
+"2000002","BarCo Holdings","BarCo","","00987654321098","Whey protein isolate, cocoa ""dutch processed"", almonds","","60","GRM","1 bar","Bars","LI","","2026-07-01","2026-08-01","United States","","","",""," "
+"2000003","Brew Co","Brew Co","","111111111117","Coffee, water","","240","ml","1 cup","Coffee","LI","","2026-07-01","2026-08-01","United States","","","",""," "
+"2000004","Crunch Inc","Crunch","","222222222224","Potatoes, oil, salt","","28","g","","Chips","LI","","2026-07-01","2026-08-01","United States","","","",""," "

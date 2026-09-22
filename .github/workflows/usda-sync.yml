@@ -1,0 +1,49 @@
+# Monthly upsert of USDA FoodData Central into Supabase.
+# Loads the newest Foundation, Survey and Branded CSV releases; a release
+# that's already in usda.load_runs is skipped, so most runs do nothing.
+# SR Legacy is final (2018) and is loaded once by hand.
+#
+# Secret SUPABASE_DB_URL: the Supabase session pooler connection string
+# (port 5432, IPv4). The transaction pooler can't run \copy.
+name: USDA sync
+
+on:
+  schedule:
+    - cron: "0 9 5 * *"
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Release zip URL to load (blank = newest of each dataset)
+        required: false
+      force:
+        description: Reload even if already loaded
+        type: boolean
+        default: false
+
+concurrency: usda-sync
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update -q && sudo apt-get install -yq postgresql-client
+      - name: Load
+        env:
+          USDA_WORK_DIR: ${{ runner.temp }}/usda
+          URL: ${{ inputs.url }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: |
+          if [[ -n "$URL" ]]; then
+            scripts/usda/load.sh $FORCE "$URL"
+          else
+            for dataset in foundation_food survey_food branded_food; do
+              url=$(scripts/usda/latest_url.sh "$dataset")
+              scripts/usda/load.sh $FORCE "$url"
+              rm -rf "$USDA_WORK_DIR"
+            done
+          fi
