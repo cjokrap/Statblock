@@ -24,6 +24,7 @@ ready (user IDs everywhere, row-level security on) so it can open up later.
 ## Repo layout
 
 ```
+web/            Next.js app (see web/README.md)
 supabase/
   migrations/   SQL migrations, applied in filename order
   tests/        SQL tests (RLS isolation, effective-dated settings, USDA loader)
@@ -32,6 +33,7 @@ scripts/
   liftosaur/    Liftosaur workout sync
   usda/         USDA FoodData Central loader
 docs/
+  app-plan.md   The app's build plan and status
   database.md   Setting up the Supabase database and applying migrations
   liftosaur-sync.md  Connecting Liftosaur and how the workout sync works
   rules-engine.md    How XP, quests and ability scores are computed
