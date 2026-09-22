@@ -32,6 +32,7 @@ create function storage.foldername(name text) returns text[] language sql immuta
 
 create schema vault;
 create table vault.secrets (id uuid primary key default gen_random_uuid(), name text, description text, secret text);
+create view vault.decrypted_secrets as select id, name, description, secret as decrypted_secret from vault.secrets;
 create function vault.create_secret(new_secret text, new_name text default null, new_description text default '')
 returns uuid language sql as
   $$ insert into vault.secrets (secret, name, description) values (new_secret, new_name, new_description) returning id $$;
