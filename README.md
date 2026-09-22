@@ -26,9 +26,12 @@ ready (user IDs everywhere, row-level security on) so it can open up later.
 ```
 supabase/
   migrations/   SQL migrations, applied in filename order
-  tests/        SQL tests (RLS isolation, effective-dated settings)
+  tests/        SQL tests (RLS isolation, effective-dated settings, USDA loader)
+scripts/
+  usda/         USDA FoodData Central loader
 docs/
   schema.md     Table-by-table notes for review
+  usda-loader.md  How the USDA loader works
 ```
 
 ## Not medical advice

@@ -80,6 +80,8 @@ Migrations live in `supabase/migrations` and run in filename order.
 - Game output (`xp_ledger`, `stat_snapshots`, `quest_progress`) is written by
   the server (service role) only. Clients read it.
 - RLS is on for every table. New tables need policies in the same migration.
+- USDA foods are never deleted. A food missing from a new release gets
+  `retired_at`, which hides it from search while old logs still point at it.
 
 ## Data sources and licensing
 
@@ -110,15 +112,16 @@ PGHOST=... PGPORT=... PGUSER=postgres supabase/tests/run_local.sh
 
 The script applies `00_local_supabase_stubs.sql` (stand-ins for Supabase's
 auth, storage and vault), then every migration, then
-`10_schema_behavior.sql`. All asserts must pass. Add tests there for new
+`10_schema_behavior.sql`, then the USDA loader tests (`20_usda_loader.sh`, on a
+second fresh database). All asserts must pass. Add tests there for new
 behavior.
 
 ## Next steps
 
-1. **USDA loader:** bulk insert Foundation, SR Legacy, Survey and Branded
-   into `foods`, `food_nutrients` and `food_portions`, then run scheduled
-   upserts keyed on `(source, source_id)`. Map Atwater energy (2047/2048) to
-   `energy` when 1008 is missing.
+1. **USDA loader:** built (`scripts/usda/load.sh`, `docs/usda-loader.md`,
+   monthly `.github/workflows/usda-sync.yml`). To do: set the
+   `SUPABASE_DB_URL` secret, run the first loads, and check Branded fits the
+   database plan.
 2. **Liftosaur sync:** a scheduled job that pulls `/api/v1/history`
    incrementally (`integrations.sync_cursor`) and parses Liftoscript records
    into `workout_session` and `workout_set` events. Dedupe on `source_ref`.

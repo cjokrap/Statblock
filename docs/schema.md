@@ -1,9 +1,9 @@
 # Statblock schema: review notes
 
-Nine migrations in `supabase/migrations`, applied in filename order. All of
+Ten migrations in `supabase/migrations`, applied in filename order. All of
 them run clean on Postgres 16, and `supabase/tests/run_local.sh` runs 50
 behavior checks (RLS isolation, effective-dated settings, append-only events,
-voids, dedupe, levels, DRIs).
+voids, dedupe, levels, DRIs), then the USDA loader tests.
 
 ## Design rules
 
@@ -30,7 +30,8 @@ voids, dedupe, levels, DRIs).
 | --- | --- | --- |
 | User | `profiles`, `user_settings`, `user_nutrient_targets` | Profile created by a signup trigger. Targets come from first-run setup. |
 | Nutrition reference | `nutrients`, `dri_targets` | 29 nutrients with USDA ids; 20 count toward INT. DRIs for adults 19+ by sex and age band. |
-| Foods | `foods`, `food_nutrients`, `food_portions`, `off_products` | USDA and custom foods share `foods`; `source_rank` puts whole foods first. Open Food Facts kept separate (ODbL). FatSecret results are not stored. |
+| Foods | `foods`, `food_nutrients`, `food_portions`, `off_products` | USDA and custom foods share `foods`; `source_rank` puts whole foods first. USDA foods dropped from a release get `retired_at` and leave search. Open Food Facts kept separate (ODbL). FatSecret results are not stored. |
+| USDA loader | `usda.stage_*`, `usda.nutrient_aliases`, `usda.load_runs` | Server-only schema. See `docs/usda-loader.md`. |
 | Supplements | `supplements`, `supplement_nutrients`, `daily_stack_items` | DSLD (CC0) plus custom. |
 | Events | `events` + 9 detail tables, `recovery_periods`, `self_care_categories` | Logging goes through `log_food`, `log_water`, `log_stack`, `log_weigh_in`, `log_self_care`, `log_activity`, `log_skip`, `end_recovery`, `void_event`. |
 | Game | `tracks`, `rules_versions`, `rules_config`, `xp_ledger`, `stat_snapshots`, `quest_definitions`, `quest_progress`, loot and achievement tables | Rules v1 seeded from the design doc. Levels use D&D 5e thresholds divided by 10. |
@@ -57,5 +58,5 @@ voids, dedupe, levels, DRIs).
 
 ## Not yet in the schema
 
-Recipes and shopping lists (Cook/Provisioner, later), the USDA staging tables
-(created by the loader), and the homegrown workout tracker (later).
+Recipes and shopping lists (Cook/Provisioner, later) and the homegrown workout
+tracker (later).
