@@ -75,6 +75,38 @@ class Tiers(unittest.TestCase):
         self.assertEqual(lh.day_tiers([], {"day": 1}), {})
         self.assertEqual(lh.day_tiers(weeks, {}), {})
 
+    RIPPLER = (
+        "# Week 1\n## Day 1\n"
+        "// **T1**. Set your 1RM before starting the sets.\n"
+        "t1 / used: none / 3x5 (80%) / 80% / progress: custom() {~\n"
+        "  if (week == 12) {\n    rm1 = completedWeights[ns]\n  }\n~}\n"
+        "t2 / used: none / 5x6 (68%) / 68%\n"
+        "// ...t1\nt1: Bench Press[1-12] / ...t1\n"
+        "t2: Incline Bench Press[1-10] / ...t2\n"
+        "## Day 3\nt1: Overhead Press[1-12] / ...t1\n"
+        "t3: Incline Bench Press[1-10] / ...t3\n"
+        "# Week 2\n## Day 1\n## Day 3\n# Week 12\n## Day 1\n## Day 3\n")
+
+    def test_rippler_week_ranges_inherit_from_week_one(self):
+        weeks = lh.program_tiers(self.RIPPLER)
+        for week in (1, 2, 12):
+            day1 = lh.day_tiers(weeks, {"week": week, "day_in_week": 1, "day_name": "Day 1"})
+            self.assertEqual(lh.tier_for(day1, "Bench Press"), "T1", f"week {week}")
+            self.assertEqual(lh.tier_for(day1, "Incline Bench Press"), "T2", f"week {week}")
+            day3 = lh.day_tiers(weeks, {"week": week, "day_in_week": 2, "day_name": "Day 3"})
+            self.assertEqual(lh.tier_for(day3, "Incline Bench Press"), "T3", f"week {week}")
+        # Template definitions and script lines aren't exercises.
+        all_names = {n for w in weeks for _, d in w for n in d}
+        self.assertEqual(all_names, {"bench press", "incline bench press", "overhead press"})
+
+    def test_tier_from_template_when_unlabelled(self):
+        weeks = lh.program_tiers(
+            "# Week 1\n## Day 1\nt1 / used: none / 1x10 75%\n"
+            "Squat[1,1-12] / ...t1\nDeficit Deadlift[2,1-5] / ...t2a\n"
+            "Leg Press / ...t3_modified\nFace Pull / 3x20\n")
+        day = lh.day_tiers(weeks, {"week": 1, "day_in_week": 1, "day_name": "Day 1"})
+        self.assertEqual(day, {"squat": "T1", "deficit deadlift": "T2", "leg press": "T3"})
+
     def test_session_sets(self):
         s = lh.parse_record(
             "2026-03-01 10:00:00 +00:00 / exercises: {\n"
