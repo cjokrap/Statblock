@@ -82,5 +82,11 @@ sql="$staged/load.sql"
 } > "$sql"
 
 echo "merging $release (full release: $full)" >&2
-"${psql[@]}" -1 -v release="$release" -v full="$full" -v force="$force" -f "$sql"
+if ! "${psql[@]}" -1 -v release="$release" -v full="$full" -v force="$force" -f "$sql"; then
+  # The rollback undoes the staged rows but not the disk they used; truncate
+  # gives the space back right away.
+  "${psql[@]}" -c "truncate usda.stage_food, usda.stage_food_nutrient, usda.stage_food_portion, usda.stage_measure_unit, usda.stage_branded_food" ||
+    echo "warning: couldn't empty the usda.stage_* tables; truncate them by hand" >&2
+  exit 1
+fi
 rm -rf "$staged"

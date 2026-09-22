@@ -1,0 +1,50 @@
+# Apply pending migrations in supabase/migrations to the Supabase database.
+# Run it by hand from the Actions tab after merging a PR that adds a
+# migration. Modes:
+#   apply     run pending migrations (the normal choice)
+#   dry-run   only list what would be applied
+#   baseline  one time only: the database was built by pasting migrations
+#             into the SQL Editor; record them as applied without running them
+#
+# Secret SUPABASE_DB_URL: the Supabase session pooler connection string
+# (port 5432), the same one the USDA sync uses.
+name: Migrate database
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "apply = run pending migrations; dry-run = only list them; baseline = one time, record a hand-built database's migrations as applied"
+        type: choice
+        options: [apply, dry-run, baseline]
+        default: apply
+
+concurrency: migrate-database
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update -q && sudo apt-get install -yq postgresql-client
+      - name: Check the secret is set
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [[ -z "$DATABASE_URL" ]]; then
+            echo "::error::Repo secret SUPABASE_DB_URL is not set. See docs/database.md."
+            exit 1
+          fi
+      - name: Migrate
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          case "$MODE" in
+            apply) scripts/db/migrate.sh ;;
+            dry-run) scripts/db/migrate.sh --dry-run ;;
+            baseline) scripts/db/migrate.sh --baseline ;;
+            *) echo "::error::unknown mode $MODE"; exit 1 ;;
+          esac
