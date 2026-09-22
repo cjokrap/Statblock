@@ -1,0 +1,31 @@
+{
+ "keys": {
+  "lftsk_test_charles": {
+   "history": [
+    {
+     "id": 1754000000000,
+     "text": "2026-08-01 17:00:00 +00:00 / program: \"GZCLP\" / day: 1 / duration: 3900s / exercises: {\n  Squat / 5x3 215lb / target: 5x3+ 215lb 180s\n}"
+    },
+    {
+     "id": 1757870000000,
+     "text": "// Great session\n2026-09-14 18:30:00 +00:00 / program: \"GZCLP\" / day: 1 / duration: 3900s / exercises: {\n  // felt strong\n  Squat / 4x3 225lb, 1x5 225lb @8.5 / warmup: 1x5 135lb, 1x3 185lb / target: 5x3+ 225lb 180s\n  Bench Press / 3x10 135lb / target: 3x10 135lb 120s\n  Lat Pulldown / 2x15 100lb, 1x22 100lb / target: 3x15+ 100lb 90s\n  Bicep Curl, Dumbbell / 3x12 12.5kg\n}"
+    },
+    {
+     "id": 1757960000000,
+     "text": "2026-09-15 19:00:00 +00:00 / program: \"GZCLP\" / day: 2 / duration: 3900s / exercises: {\n  Overhead Press / 5x3 95lb / target: 5x3+ 95lb 180s\n  Deadlift / 3x10 185lb / target: 3x10 185lb 120s\n  Bent Over Row / 3x15 95lb / target: 3x15+ 95lb 90s\n}"
+    },
+    {
+     "id": 1758080000000,
+     "text": "2026-09-17T03:30:00Z / program: \"GZCLP\" / day: 3 / duration: 3900s / exercises: {\n  Bench Press / 5x3 185lb / target: 5x3+ 185lb 180s\n  Squat / 3x10 175lb / target: 3x10 175lb 120s\n  Pull Up / 3x8, 1x6 / target: 3x8-12\n  Lat Pulldown / 3x15 100lb\n}"
+    }
+   ],
+   "programs": [
+    {
+     "id": "p1",
+     "name": "GZCLP",
+     "text": "# Week 1\n## Day 1\n// ...t1\nt1: Squat / 5x3+ / 225lb / progress: custom() { ...t1 }\nt2: Bench Press / 3x10 / 135lb\nt3: Lat Pulldown / 3x15+ / 100lb\n\n## Day 2\nt1: Overhead Press / 5x3+ / 95lb\nt2: Deadlift / 3x10 / 185lb\nt3: Bent Over Row / 3x15+ / 95lb\n\n## Day 3\nt1: Bench Press / 5x3+ / 185lb\nt2: Squat / 3x10 / 175lb\nt3: Lat Pulldown / 3x15+ / 100lb\n"
+    }
+   ]
+  }
+ }
+}

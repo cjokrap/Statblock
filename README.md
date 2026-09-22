@@ -29,9 +29,11 @@ supabase/
   tests/        SQL tests (RLS isolation, effective-dated settings, USDA loader)
 scripts/
   db/           Migration runner (used by the Migrate database workflow)
+  liftosaur/    Liftosaur workout sync
   usda/         USDA FoodData Central loader
 docs/
   database.md   Setting up the Supabase database and applying migrations
+  liftosaur-sync.md  Connecting Liftosaur and how the workout sync works
   schema.md     Table-by-table notes for review
   usda-loader.md  How the USDA loader works
 ```

@@ -21,3 +21,7 @@ PGDATABASE="${DB}_usda" supabase/tests/20_usda_loader.sh
 psql -v ON_ERROR_STOP=1 -q -d postgres -c "drop database if exists ${DB}_migrate" -c "create database ${DB}_migrate"
 psql -v ON_ERROR_STOP=1 -q -d "${DB}_migrate" -f supabase/tests/00_local_supabase_stubs.sql
 PGDATABASE="${DB}_migrate" supabase/tests/30_migrate.sh
+
+python3 -m unittest discover -s scripts/liftosaur -q
+fresh_db "${DB}_liftosaur"
+PGDATABASE="${DB}_liftosaur" supabase/tests/40_liftosaur_sync.sh

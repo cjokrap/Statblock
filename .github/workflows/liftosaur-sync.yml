@@ -1,0 +1,28 @@
+# Pull workout history from Liftosaur into Statblock events every 2 hours.
+# The first sync of a connected account loads its whole history; later ones
+# re-check the last 21 days, which also picks up edits and deletions.
+# See docs/liftosaur-sync.md.
+#
+# Secret SUPABASE_DB_URL: the Supabase session pooler connection string.
+# API keys come from Supabase Vault, never from GitHub.
+name: Liftosaur sync
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+
+concurrency: liftosaur-sync
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql
+        run: sudo apt-get update -q && sudo apt-get install -yq postgresql-client
+      - name: Sync
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: scripts/liftosaur/sync.py

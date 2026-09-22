@@ -95,7 +95,7 @@ steps are in `docs/database.md`.
 | NIH DSLD | Supplement labels | CC0 |
 | Open Food Facts | Barcodes | ODbL share-alike. Keep in `off_products`, separate from `foods`. |
 | FatSecret | Gap filler | Do not store results. Caching isn't part of the free Basic tier. |
-| Liftosaur API | Workout history | User's own Premium key, stored in Supabase Vault via `set_liftosaur_key` (service role only). Sent as `Authorization: Bearer lftsk_...`. Endpoint: `GET /api/v1/history`. |
+| Liftosaur API | Workout history | User's own Premium key, stored in Supabase Vault via `set_liftosaur_key` (service role only). Sent as `Authorization: Bearer lftsk_...`. Endpoints: `GET /api/v1/history` and `GET /api/v1/programs/:id` (for tiers). With `startDate`, the API ignores `cursor`. Liftosaur is open source (github.com/astashov/liftosaur); its grammar and serializer are the format reference. |
 
 MyFitnessPal and Cronometer have no public API. Don't plan around them.
 
@@ -117,7 +117,8 @@ PGHOST=... PGPORT=... PGUSER=postgres supabase/tests/run_local.sh
 The script applies `00_local_supabase_stubs.sql` (stand-ins for Supabase's
 auth, storage and vault), then every migration, then
 `10_schema_behavior.sql`, then the USDA loader tests (`20_usda_loader.sh`, on a
-second fresh database), then the migration runner tests (`30_migrate.sh`). All
+second fresh database), then the migration runner tests (`30_migrate.sh`), then the Liftosaur parser unit
+tests and sync tests (`40_liftosaur_sync.sh`, against a fake Liftosaur API). All
 asserts must pass. Add tests there for new
 behavior.
 
@@ -129,10 +130,12 @@ behavior.
    the hand-built database with the Migrate database workflow, then re-run
    USDA sync with force (the first Survey load staged no nutrients because
    of a since-fixed parsing bug).
-2. **Liftosaur sync:** a scheduled job that pulls `/api/v1/history`
-   incrementally (`integrations.sync_cursor`) and parses Liftoscript records
-   into `workout_session` and `workout_set` events. Dedupe on `source_ref`.
-   Detect PRs from `est_1rm_kg`.
+2. **Liftosaur sync:** built (`scripts/liftosaur/sync.py`,
+   `docs/liftosaur-sync.md`, `.github/workflows/liftosaur-sync.yml`, every 2
+   hours). GZCL tiers come from the program's `t1:`/`t2:`/`t3:` labels,
+   because history records don't carry them. PRs are in the
+   `workout_prs` view. To do: create Charles's auth user, store his key
+   with `set_liftosaur_key`, and run the first sync (steps in the doc).
 3. **Rules engine:** events plus the active rules version produce
    `xp_ledger`, `stat_snapshots` and `quest_progress`. Must be replayable.
    Test it against made-up weeks of data.
