@@ -1,7 +1,8 @@
 # Monthly upsert of USDA FoodData Central into Supabase.
-# Loads the newest Foundation, Survey and Branded CSV releases; a release
+# Loads the newest Foundation, SR Legacy and Survey CSV releases; a release
 # that's already in usda.load_runs is skipped, so most runs do nothing.
-# SR Legacy is final (2018) and is loaded once by hand.
+# Branded is left out: its ~2 million products need several GB, far more
+# than the Supabase free plan. See docs/usda-loader.md.
 #
 # Secret SUPABASE_DB_URL: the Supabase session pooler connection string
 # (port 5432, IPv4). The transaction pooler can't run \copy.
@@ -41,7 +42,7 @@ jobs:
           if [[ -n "$URL" ]]; then
             scripts/usda/load.sh $FORCE "$URL"
           else
-            for dataset in foundation_food survey_food branded_food; do
+            for dataset in foundation_food sr_legacy_food survey_food; do
               url=$(scripts/usda/latest_url.sh "$dataset")
               scripts/usda/load.sh $FORCE "$url"
               rm -rf "$USDA_WORK_DIR"

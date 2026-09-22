@@ -91,7 +91,7 @@ steps are in `docs/database.md`.
 
 | Source | Use | Rule |
 | --- | --- | --- |
-| USDA FoodData Central | Primary food data | Public domain. Bulk-load it (API limit is 1,000 requests/hour). Whole foods (Foundation, SR Legacy) rank first in search. |
+| USDA FoodData Central | Primary food data | Public domain. Bulk-load Foundation, SR Legacy and Survey. Branded (about 2M products) is too big for Supabase free, so it's not bulk-loaded; look packaged foods up on demand through the FDC API (1,000 requests/hour) and keep only the ones logged. Whole foods (Foundation, SR Legacy) rank first in search. |
 | NIH DSLD | Supplement labels | CC0 |
 | Open Food Facts | Barcodes | ODbL share-alike. Keep in `off_products`, separate from `foods`. |
 | FatSecret | Gap filler | Do not store results. Caching isn't part of the free Basic tier. |
@@ -124,10 +124,11 @@ behavior.
 ## Next steps
 
 1. **USDA loader:** built (`scripts/usda/load.sh`, `docs/usda-loader.md`,
-   monthly `.github/workflows/usda-sync.yml`). To do (in order, see
-   `docs/database.md`): set the `SUPABASE_DB_URL` secret, run the Migrate
-   database workflow on the empty database, then run the first USDA loads.
-   Check that Branded fits the database plan.
+   monthly `.github/workflows/usda-sync.yml` for Foundation, SR Legacy and
+   Survey). Branded is not bulk-loaded (see Data sources). To do: baseline
+   the hand-built database with the Migrate database workflow, then re-run
+   USDA sync with force (the first Survey load staged no nutrients because
+   of a since-fixed parsing bug).
 2. **Liftosaur sync:** a scheduled job that pulls `/api/v1/history`
    incrementally (`integrations.sync_cursor`) and parses Liftoscript records
    into `workout_session` and `workout_set` events. Dedupe on `source_ref`.
@@ -136,7 +137,9 @@ behavior.
    `xp_ledger`, `stat_snapshots` and `quest_progress`. Must be replayable.
    Test it against made-up weeks of data.
 4. **Next.js app:** dashboard, food logging, settings, first-run setup, then
-   the Liftosaur connect screen. Follow the mockup.
+   the Liftosaur connect screen. Follow the mockup. Food search should fall
+   back to a live FDC API lookup for packaged foods, saving only what gets
+   logged.
 
 ## Later (not v1)
 

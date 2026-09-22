@@ -8,14 +8,12 @@ Loads USDA FoodData Central (public domain) CSV releases into `foods`,
 DATABASE_URL=postgres://... scripts/usda/load.sh <release.zip | URL | unzipped dir>
 ```
 
-Load each dataset once to start:
-
-| Dataset | Source in `foods` | Ranks | Updates |
-| --- | --- | --- | --- |
-| `foundation_food` | `usda_foundation` | 1 (whole food) | About twice a year |
-| `sr_legacy_food` | `usda_sr_legacy` | 1 (whole food) | Final (2018). Load once. |
-| `survey_food` (FNDDS) | `usda_survey` | 2 (generic dish) | About every two years |
-| `branded_food` | `usda_branded` | 3 | Several times a year |
+| Dataset | Source in `foods` | Ranks | Updates | Loaded? |
+| --- | --- | --- | --- | --- |
+| `foundation_food` | `usda_foundation` | 1 (whole food) | About twice a year | Yes |
+| `sr_legacy_food` | `usda_sr_legacy` | 1 (whole food) | Final (2018) | Yes |
+| `survey_food` (FNDDS) | `usda_survey` | 2 (generic dish) | About every two years | Yes |
+| `branded_food` | `usda_branded` | 3 | Several times a year | **No** (see Size) |
 
 `scripts/usda/latest_url.sh <dataset>` prints the newest release's URL.
 
@@ -25,8 +23,15 @@ Load each dataset once to start:
    CSVs by header name and keeps only what's used. That means the four data
    types above (Foundation zips also hold sub-sample rows), nutrients that
    map to `public.nutrients`, and a few branded columns. It also cleans
-   numbers and dates. This shrinks the Branded upload a lot, because its
-   ingredients text and unmapped nutrients never leave the machine.
+   numbers and dates:
+   - Ids written as decimals (`1008.0`) are accepted.
+   - A file that uses legacy nutrient numbers (`208`) in place of nutrient
+     ids is translated through the release's `nutrient.csv`.
+   - The log shows how many rows each file dropped and why.
+   - If `food_nutrient.csv` yields no usable rows for a release that has
+     foods, it stops and prints the file's header and first rows. That
+     usually means FDC changed the layout. Without this stop, every food
+     would be skipped for having no energy value.
 2. **Stage and merge** (one transaction): psql `\copy`s the trimmed files into
    `usda.stage_*` and calls `usda.merge_staged(release, full_release, force)`.
 
@@ -61,7 +66,9 @@ The merge:
   rows point at them, but `search_foods` hides them. A food that reappears is
   un-retired. The merge refuses to retire more than half of a source's
   active foods, because that usually means a truncated download.
-- **Records the run** in `usda.load_runs` and empties staging.
+- **Records the run** in `usda.load_runs` and empties staging. If the load
+  fails, `load.sh` empties staging anyway. A rollback undoes the rows but
+  doesn't give their disk space back; truncating does.
 
 Options:
 
@@ -78,8 +85,10 @@ per 100 g, so a liquid's values are treated as per 100 g.
 
 `.github/workflows/usda-sync.yml` runs on the 5th of each month and can also
 be started by hand, optionally with a specific release URL. It loads the
-newest Foundation, Survey and Branded releases. Releases already in
-`usda.load_runs` are skipped, so most months nothing happens. It needs the
+newest Foundation, SR Legacy and Survey releases. Releases already in
+`usda.load_runs` are skipped, so most months nothing happens. To reload a
+release (for example, after a loader fix), run it by hand with **force**
+ticked. It needs the
 repo secret `SUPABASE_DB_URL`, set to the **session pooler** connection
 string (IPv4, port 5432). The transaction pooler can't run `\copy`.
 
@@ -90,10 +99,20 @@ explicit URL.
 
 ## Size
 
-Branded is by far the largest dataset, with well over a million products.
-Foundation, SR Legacy and Survey together are small (around 15,000 foods).
-Before loading Branded into a hosted database, check the plan's disk limit.
-The Supabase free tier is unlikely to hold it along with its search indexes.
+Foundation, SR Legacy and Survey together are small (around 14,000 foods).
+
+Branded is not loaded. The April 2026 release has about 2 million products
+and 21.7 million nutrient rows. Staging it alone filled the Supabase free
+plan's disk, before the merge or search indexes. Packaged foods are covered
+two other ways instead:
+- **Barcodes:** Open Food Facts (`off_products`), which stores only the
+  products actually scanned.
+- **Search (planned, with the app):** the FDC API, looked up on demand and
+  saving only foods that get logged. One user is far below its limit of
+  1,000 requests an hour.
+
+`load.sh` can still load a Branded release by hand into a database with
+several GB free.
 
 ## Tests
 

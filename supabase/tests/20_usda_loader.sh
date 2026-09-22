@@ -131,6 +131,23 @@ if scripts/usda/load.sh --partial "$USDA_WORK_DIR/no_branded" > /dev/null 2>&1; 
   echo "FAIL: branded release without branded_food.csv should be rejected" >&2; exit 1
 fi
 
+# Survey files that use legacy nutrient numbers and decimal ids still load.
+load $fx/FoodData_Central_survey_food_csv_2026-11-30_nutrient_numbers
+check "
+  assert (select kcal_100g from public.foods where source_id = '2705385') = 71, 'nutrient numbers mapped to ids';
+  assert (select protein_100g from public.foods where source_id = '2705385') = 2.5, 'protein from nutrient number';
+"
+
+# A nutrient file with no usable rows stops the load instead of skipping every food.
+out=$(scripts/usda/load.sh $fx/FoodData_Central_survey_food_csv_2026-12-31_unreadable 2>&1) &&
+  { echo "FAIL: unreadable nutrient file should stop the load" >&2; exit 1; }
+[[ $out == *"no usable nutrient rows"* && $out == *"header:"* ]] ||
+  { echo "FAIL: unreadable nutrient file should explain itself; got: $out" >&2; exit 1; }
+check "
+  assert (select kcal_100g from public.foods where source_id = '2705385') = 71, 'stopped load changed nothing';
+  assert not exists (select 1 from usda.load_runs where release like '%unreadable'), 'stopped load not recorded';
+"
+
 # Clients can't reach the staging schema or the merge.
 psql -X -q -v ON_ERROR_STOP=1 <<'SQL'
 set role authenticated;
