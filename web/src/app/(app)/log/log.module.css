@@ -172,3 +172,45 @@
   text-decoration: none;
   padding: 8px 0;
 }
+
+/* Barcode scanner */
+.camera {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--sheet);
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.aim {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 35%;
+  bottom: 35%;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  box-shadow: 0 0 0 999px rgba(31, 27, 22, 0.35);
+}
+
+.scanLink {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}

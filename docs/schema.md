@@ -31,7 +31,7 @@ Liftosaur sync and rules engine tests.
 | --- | --- | --- |
 | User | `profiles`, `user_settings`, `user_nutrient_targets` | Profile created by a signup trigger. Targets come from first-run setup. |
 | Nutrition reference | `nutrients`, `dri_targets` | 29 nutrients with USDA ids; 20 count toward INT. DRIs for adults 19+ by sex and age band. |
-| Foods | `foods`, `food_nutrients`, `food_portions`, `off_products` | USDA and custom foods share `foods`; `source_rank` puts whole foods first. USDA foods dropped from a release get `retired_at` and leave search. Open Food Facts kept separate (ODbL). FatSecret results are not stored. |
+| Foods | `foods`, `food_nutrients`, `food_portions`, `off_products` | USDA and custom foods share `foods`; `source_rank` puts whole foods first. USDA foods dropped from a release get `retired_at` and leave search. Open Food Facts products are saved only when logged: raw JSON in `off_products`, plus a `foods` row with source `off` (ODbL; see CLAUDE.md). FatSecret results are not stored. |
 | USDA loader | `usda.stage_*`, `usda.nutrient_aliases`, `usda.load_runs` | Server-only schema. See `docs/usda-loader.md`. |
 | Liftosaur sync | `liftosaur.stage_records`, `liftosaur.apply_records()`, `workout_prs` view | Server-only schema, plus a client-readable PR view. See `docs/liftosaur-sync.md`. |
 | Rules engine | `game.recompute()`, `game.replay()`, `game.day_facts()`, `game.scores()` | Server-only functions that write `xp_ledger`, `quest_progress` and `stat_snapshots`. See `docs/rules-engine.md`. |

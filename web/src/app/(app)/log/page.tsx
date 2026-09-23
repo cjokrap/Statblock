@@ -14,6 +14,7 @@ const SOURCE_BADGE: Record<string, string> = {
   usda_sr_legacy: "USDA",
   usda_survey: "Dish",
   usda_branded: "Brand",
+  off: "Brand",
 };
 
 export default async function LogPage({ searchParams }: Props) {
@@ -77,6 +78,16 @@ export default async function LogPage({ searchParams }: Props) {
           Search
         </button>
       </form>
+
+      <Link href={`/log/scan?meal=${meal}`} className={styles.scanLink}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" aria-hidden="true">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+          <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
+          <line x1="13" y1="8" x2="13" y2="16" /><line x1="17" y1="8" x2="17" y2="16" />
+        </svg>
+        Scan a barcode
+      </Link>
 
       {q && results.length === 0 && packaged?.length === 0 && (
         <p className={styles.empty}>

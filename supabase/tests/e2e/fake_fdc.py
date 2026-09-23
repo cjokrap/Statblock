@@ -1,7 +1,8 @@
 """A stand-in for the USDA FoodData Central API (Branded foods) for the e2e
 test: /fdc/v1/foods/search and /fdc/v1/food/{fdcId}, in FDC's shapes. Also
 Liftosaur's /liftosaur/api/v1/history, for checking a key: only keys starting
-lftsk_good are accepted."""
+lftsk_good are accepted. And Open Food Facts' /off/api/v2/product/{code}.json
+with one product (a protein bar)."""
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -46,6 +47,11 @@ def detail_shape():
                           for i, u, v in NUTRIENTS]
     return d
 
+OFF_BAR = {"code": "0850000000123", "product_name": "Chocolate Peanut Butter Protein Bar", "brands": "Barebells,Barebells Functional Foods",
+           "serving_size": "1 bar (55 g)", "serving_quantity": 55, "serving_quantity_unit": "g",
+           "nutriments": {"energy-kcal_100g": 364, "proteins_100g": 36.4, "carbohydrates_100g": 32.7, "fat_100g": 14.5,
+                          "fiber_100g": 5.5, "sodium_100g": 0.36, "calcium_100g": 0.18}}
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def send(self, code, body):
@@ -56,6 +62,11 @@ class H(BaseHTTPRequestHandler):
         self.end_headers(); self.wfile.write(data)
     def do_GET(self):
         u = urlparse(self.path); q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        if u.path.startswith("/off/api/v2/product/"):
+            code = u.path.rsplit("/", 1)[1].removesuffix(".json")
+            if code.lstrip("0") == OFF_BAR["code"].lstrip("0"):
+                return self.send(200, {"status": 1, "code": code, "product": OFF_BAR})
+            return self.send(404, {"status": 0, "status_verbose": "product not found"})
         if u.path == "/liftosaur/api/v1/history":
             if not self.headers.get("Authorization", "").startswith("Bearer lftsk_good"):
                 return self.send(401, {"error": "Unauthorized"})
