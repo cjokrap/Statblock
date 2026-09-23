@@ -17,12 +17,29 @@ Design source: the clickable mockup (see CLAUDE.md). Its look is:
 
 | # | PR | Status |
 | --- | --- | --- |
-| 1 | Scaffold: Next.js + TypeScript in `web/`, Supabase auth (email + password sign-in), theme tokens, app shell with bottom nav, read-only character sheet (level, XP, ability scores, classes, jobs) from the game tables, CI workflow (lint, typecheck, build) | In progress |
-| 2 | First-run setup + Settings: suggested targets (Mifflin-St Jeor, rules in `targets.*`), writes `profiles` + `user_settings`, medical disclaimer on every target screen. Adds `public.rescore_me()` so the app can rescore after logging | Planned |
-| 3 | Food logging: search (`search_foods`), portions, `log_food`, food log by meal, recents, remove (void) | Planned |
+| 1 | Scaffold: Next.js + TypeScript in `web/`, Supabase auth (email + password sign-in), theme tokens, read-only character sheet (level, XP, ability scores, classes, jobs), Web CI workflow | Merged (#7) |
+| 2 | Food logging: search (`search_foods`), portions, `log_food`, food log by meal on Today, recents, remove (void). Adds `public.rescore_me()` so XP updates right after a log. e2e browser test in `supabase/tests/e2e/` | In progress |
+| 3 | First-run setup + Settings: suggested targets (Mifflin-St Jeor, rules in `targets.*`), writes `profiles` + `user_settings`, medical disclaimer on every target screen. Fix the `user_settings` edit policy to use the profile time zone (it uses UTC `current_date`) | Planned |
 | 4 | Today dashboard: calories as HP, macros, quests, weekly boss, water quick-add, daily stack button, CHA quick log, weigh-in, training feed, skip buttons | Planned |
 | 5 | Liftosaur connect screen (validate key, `set_liftosaur_key` via a server action with the service role key) | Planned |
 | 6 | Packaged foods: live FDC API lookup + Open Food Facts barcode scan | Planned |
+
+**Why logging comes before setup:** saving settings starts food judging
+(see `docs/rules-engine.md`). If setup shipped first, every day would count
+as unlogged until logging existed. Logging needs no settings and earns
+Quartermaster XP from day one.
+
+## Testing the app end to end
+
+`supabase/tests/e2e/run.sh` runs the real app against a local stand-in for
+Supabase:
+- **Postgres** with every migration and the USDA fixture foods
+- **PostgREST** for `/rest/v1`
+- **`gateway.py`** for `/auth/v1` sign-in
+
+It then drives the app in headless Chromium: sign in, search, log, re-log,
+remove. Screenshots are saved to its work directory. Extend `flow.mjs` with
+each app PR.
 
 ## Decisions
 
@@ -41,6 +58,9 @@ Design source: the clickable mockup (see CLAUDE.md). Its look is:
 1. Go to vercel.com → Add New → Project → import `cjokrap/Statblock`.
 2. Set **Root Directory** to `web`.
 3. Add environment variables from Supabase → Project Settings → API:
-   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the
-   anon / publishable key, which is safe in the browser).
+   - `NEXT_PUBLIC_SUPABASE_URL`: the Project URL.
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: the **Publishable** key
+     (`sb_publishable_…`), or the legacy anon key. Both are safe in the
+     browser.
+   - Never the Secret or service_role key: those bypass RLS.
 4. Deploy. Every merge to `main` redeploys.

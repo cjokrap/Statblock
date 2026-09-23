@@ -28,3 +28,6 @@ PGDATABASE="${DB}_liftosaur" supabase/tests/40_liftosaur_sync.sh
 
 fresh_db "${DB}_game"
 psql -v ON_ERROR_STOP=1 -q -d "${DB}_game" -f supabase/tests/50_rules_engine.sql
+
+fresh_db "${DB}_app"
+psql -v ON_ERROR_STOP=1 -q -d "${DB}_app" -f supabase/tests/60_app_support.sql

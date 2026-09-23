@@ -126,7 +126,9 @@ hand). All asserts must pass. Add tests there for new
 behavior.
 
 For the app: `cd web && npm run lint && npm run typecheck && npm test && npm run build`
-(CI runs the same in `.github/workflows/web.yml`).
+(CI runs the same in `.github/workflows/web.yml`). End to end, with a local
+stand-in for Supabase and headless Chromium:
+`PGHOST=... PGUSER=postgres supabase/tests/e2e/run.sh`.
 
 ## Next steps
 
