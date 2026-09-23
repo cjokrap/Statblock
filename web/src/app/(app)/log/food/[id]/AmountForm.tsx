@@ -1,20 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { logFood } from "@/app/actions/food";
 import type { Portion } from "@/lib/food";
 import { forGrams, MEAL_LABEL, type Meal, type Per100 } from "@/lib/meals";
 import styles from "./food.module.css";
 
 type Props = {
-  foodId: number;
+  // The server action to post to, and the hidden fields that name the food
+  // for it (food_id for stored foods, fdc_id for USDA packaged foods).
+  action: (formData: FormData) => Promise<void>;
+  ids: Record<string, string | number>;
   per100: Per100;
   portions: Portion[];
   meal: Meal;
   firstInSlot: boolean;
 };
 
-export function AmountForm({ foodId, per100, portions, meal, firstInSlot }: Props) {
+export function AmountForm({ action, ids, per100, portions, meal, firstInSlot }: Props) {
   // unit: "g" or the index of a household portion
   const [unit, setUnit] = useState<string>(portions.length ? "0" : "g");
   const [qty, setQty] = useState<string>(portions.length ? "1" : "100");
@@ -28,8 +30,10 @@ export function AmountForm({ foodId, per100, portions, meal, firstInSlot }: Prop
   const totals = forGrams(per100, grams);
 
   return (
-    <form action={logFood} onSubmit={() => setPending(true)} className={styles.form}>
-      <input type="hidden" name="food_id" value={foodId} />
+    <form action={action} onSubmit={() => setPending(true)} className={styles.form}>
+      {Object.entries(ids).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
       <input type="hidden" name="meal" value={meal} />
       <input type="hidden" name="grams" value={grams} />
       <input type="hidden" name="portion_label" value={label} />

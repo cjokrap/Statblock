@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { logFood } from "@/app/actions/food";
 import { getFood, todaysLog, userTimezone } from "@/lib/food";
 import { isMeal, localNow, mealForHour } from "@/lib/meals";
 import { AmountForm } from "./AmountForm";
@@ -49,7 +50,8 @@ export default async function FoodPage({ params, searchParams }: Props) {
           </p>
         </div>
         <AmountForm
-          foodId={food.id}
+          action={logFood}
+          ids={{ food_id: food.id }}
           per100={food}
           portions={portions}
           meal={meal}

@@ -5,6 +5,7 @@ import { localNow, type Meal } from "@/lib/meals";
 export type FoodRow = {
   id: number;
   source: string;
+  source_id: string | null;
   name: string;
   brand: string | null;
   kcal_100g: number | null;
@@ -23,7 +24,7 @@ export type LoggedItem = {
   food: FoodRow;
 };
 
-const FOOD_COLUMNS = "id, source, name, brand, kcal_100g, protein_100g, carbs_100g, fat_100g";
+const FOOD_COLUMNS = "id, source, source_id, name, brand, kcal_100g, protein_100g, carbs_100g, fat_100g";
 
 export async function userTimezone(): Promise<string> {
   const supabase = await createClient();

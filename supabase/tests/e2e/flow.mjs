@@ -57,6 +57,30 @@ if (chip) {
   await page.waitForFunction(() => document.querySelectorAll('[class*="itemName"]').length === 1);
   step("after remove: 1 item");
 }
+// A packaged food from USDA FoodData Central (the fake one in fake_fdc.py):
+// shown under "Packaged foods", saved on first log, then found locally.
+await page.click("text=+ Add lunch");
+await page.fill("#food-search", "chobani");
+await page.click("button:has-text('Search')");
+await page.waitForSelector("#packaged-heading");
+const packagedNames = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.map((e) => e.textContent));
+step("packaged results: " + packagedNames.join(" | "));
+await page.click("section[aria-labelledby=packaged-heading] li a >> nth=0");
+await page.waitForSelector("#qty");
+const yogurtOptions = await page.$$eval("#unit option", (o) => o.map((x) => x.textContent));
+if (yogurtOptions[0] !== "1 container (150 g)") throw new Error("portion label: " + yogurtOptions[0]);
+step("yogurt portions: " + (await page.$$eval("#unit option", (o) => o.map((x) => x.textContent)).then((a) => a.join(" | "))));
+step("1 container: " + (await page.textContent("dl div:first-child dd")) + " kcal");
+await page.click("button[type=submit]");
+await page.waitForFunction(() => [...document.querySelectorAll('[class*="itemName"]')].some((e) => e.textContent.includes("Greek Yogurt")));
+step("food log now: " + (await page.$$eval('[class*="itemName"]', (els) => els.map((e) => e.textContent))).join(" | "));
+await page.goto(BASE + "/log?meal=lunch&q=chobani");
+await page.waitForSelector("#packaged-heading");
+const localHit = await page.$$eval("ul li a", (els) => els.map((e) => e.textContent).filter((t) => t.includes("Greek Yogurt")));
+const packagedAfter = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.length);
+step(`search again: saved copy in main results (${localHit.length}), packaged duplicates: ${packagedAfter}`);
+if (localHit.length !== 1 || packagedAfter !== 0) throw new Error("saved packaged food should replace the USDA result");
+
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
 if (errors.length) process.exit(1);

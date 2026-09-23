@@ -15,8 +15,17 @@ work=${E2E_WORK_DIR:-/tmp/statblock-e2e}
 shots=${1:-$work/shots}
 export E2E_DB=${E2E_DB:-statblock_e2e}
 mkdir -p "$work" "$shots"
+# Each server runs in its own process group (setsid), so stopping the group
+# also stops children such as the Next.js server under npx.
 pids=()
-trap 'for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done' EXIT
+stop_all() { for p in "${pids[@]}"; do kill -- "-$p" 2>/dev/null || kill "$p" 2>/dev/null || true; done; }
+trap stop_all EXIT
+start() { setsid "$@" & pids+=($!); }
+
+# Free the ports in case an earlier run was interrupted.
+for port in 3001 3002 3457 54321; do
+  fuser -k -n tcp "$port" > /dev/null 2>&1 && sleep 0.5 || true
+done
 
 # PostgREST binary
 if [[ ! -x $work/postgrest ]]; then
@@ -35,7 +44,7 @@ for d in FoodData_Central_foundation_food_csv_2026-04-30 FoodData_Central_sr_leg
 done
 psql -X -q -v ON_ERROR_STOP=1 -d "$E2E_DB" -f supabase/tests/e2e/seed.sql
 
-# PostgREST + gateway
+# PostgREST, the auth gateway and a fake USDA FoodData Central
 cat > "$work/postgrest.conf" <<CONF
 db-uri = "postgres://authenticator:auth@${PGHOST:-localhost}:${PGPORT:-5432}/$E2E_DB"
 db-schemas = "public"
@@ -44,16 +53,19 @@ jwt-secret = "e2e-secret-e2e-secret-e2e-secret-0123"
 server-host = "127.0.0.1"
 server-port = 3001
 CONF
-"$work/postgrest" "$work/postgrest.conf" > "$work/postgrest.log" 2>&1 & pids+=($!)
-python3 supabase/tests/e2e/gateway.py > "$work/gateway.log" 2>&1 & pids+=($!)
-for _ in $(seq 50); do grep -q "anon key" "$work/gateway.log" 2>/dev/null && break; sleep 0.2; done
-anon=$(head -1 "$work/gateway.log" | cut -d' ' -f3)
+start "$work/postgrest" "$work/postgrest.conf" > "$work/postgrest.log" 2>&1
+start python3 supabase/tests/e2e/gateway.py > "$work/gateway.log" 2>&1
+start python3 supabase/tests/e2e/fake_fdc.py > "$work/fdc.log" 2>&1
+for _ in $(seq 50); do grep -q "service key" "$work/gateway.log" 2>/dev/null && break; sleep 0.2; done
+anon=$(grep "^anon key" "$work/gateway.log" | cut -d' ' -f3)
+service=$(grep "^service key" "$work/gateway.log" | cut -d' ' -f3)
 
 # The app, built against the stand-in (NEXT_PUBLIC_* are inlined at build).
 cd web
 export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=$anon
+export SUPABASE_SECRET_KEY=$service FDC_API_KEY=e2e-fdc-key FDC_API_BASE=http://127.0.0.1:3002/fdc/v1
 npx next build > "$work/build.log" 2>&1
-npx next start -p 3457 > "$work/next.log" 2>&1 & pids+=($!)
+start npx next start -p 3457 > "$work/next.log" 2>&1
 for _ in $(seq 50); do curl -fs -o /dev/null http://localhost:3457/login && break; sleep 0.2; done
 
 # Browser flow

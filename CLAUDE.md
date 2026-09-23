@@ -93,7 +93,7 @@ steps are in `docs/database.md`.
 
 | Source | Use | Rule |
 | --- | --- | --- |
-| USDA FoodData Central | Primary food data | Public domain. Bulk-load Foundation, SR Legacy and Survey. Branded (about 2M products) is too big for Supabase free, so it's not bulk-loaded; look packaged foods up on demand through the FDC API (1,000 requests/hour) and keep only the ones logged. Whole foods (Foundation, SR Legacy) rank first in search. |
+| USDA FoodData Central | Primary food data | Public domain. Bulk-load Foundation, SR Legacy and Survey. Branded (about 2M products) is too big for Supabase free, so it's not bulk-loaded; the app looks packaged foods up live through the FDC API (`FDC_API_KEY`, 1,000 requests/hour) and saves only the ones logged, server-side with `SUPABASE_SECRET_KEY`. Whole foods (Foundation, SR Legacy) rank first in search. |
 | NIH DSLD | Supplement labels | CC0 |
 | Open Food Facts | Barcodes | ODbL share-alike. Keep in `off_products`, separate from `foods`. |
 | FatSecret | Gap filler | Do not store results. Caching isn't part of the free Basic tier. |
