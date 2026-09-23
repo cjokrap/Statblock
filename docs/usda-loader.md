@@ -114,8 +114,15 @@ two other ways instead:
   requests an hour.
   FDC matches any word of a query, so the app asks for products with
   every word first (falling back to any word), then ranks each page by how
-  many words appear in the name or brand. Results come 25 to a page, with
-  a "More packaged foods" link.
+  many words appear in the name, brand or sub-brand (a "!" standing in for
+  an i, as in "FA!RLIFE", counts as one). It fetches 100 at a time, so a
+  good match from lower in FDC's order still ranks near the top, and shows
+  25 to a page with a "More packaged foods" link.
+- **Broken detail records:** some FDC detail records (`/food/{fdcId}`) are
+  missing, or list amounts without saying which nutrient each one is (seen
+  on fdcId 2278100). When the details give no calories, the app uses the
+  product's search-result entry instead, found through the search the user
+  came from, then its barcode, then its name.
 
 `load.sh` can still load a Branded release by hand into a database with
 several GB free.
