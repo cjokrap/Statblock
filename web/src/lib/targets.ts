@@ -143,3 +143,9 @@ export function parseNumber(s: unknown): number | null {
 }
 
 export const round1 = (n: number) => Math.round(n * 10) / 10;
+
+// Fiber goal when none is set: 14 g per 1,000 kcal of the calorie target
+// (Dietary Guidelines for Americans), so 28 g at 2,000 kcal.
+export function fiberSuggestion(kcal: number): number {
+  return Math.round((kcal / 1000) * 14);
+}

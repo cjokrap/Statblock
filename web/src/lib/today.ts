@@ -1,6 +1,7 @@
 import "server-only";
 import type { QuestRow, SetRow } from "@/lib/dashboard";
 import { createClient } from "@/lib/supabase/server";
+import { fiberSuggestion } from "@/lib/targets";
 
 export type Today = {
   date: string; // the user's calendar day
@@ -15,12 +16,17 @@ export type Today = {
     carbs_g: number;
     fat_g: number;
     carbs_are_ceiling: boolean;
+    fiber_g: number; // the goal, or the suggestion when none is set
     water_goal_ml: number;
   } | null;
   quests: QuestRow[]; // today's daily quests
   bosses: QuestRow[]; // this week's
   water: { totalMl: number; lastEventId: number | null };
-  stack: { items: { name: string; serving: string }[]; taken: { eventId: number; at: string } | null };
+  stack: {
+    items: { name: string; serving: string }[];
+    taken: { eventId: number; at: string } | null;
+    fiberG: number; // fiber from stacks taken today
+  };
   selfCare: { id: number; name: string; weight: number }[];
   selfCareToday: { eventId: number; categoryId: number; at: string }[];
   weighIn: { eventId: number; kg: number } | null; // today's
@@ -51,7 +57,7 @@ export async function loadToday(): Promise<Today> {
     supabase.from("profiles").select("timezone, weight_unit, water_unit").single(),
     supabase
       .from("user_settings")
-      .select("calorie_target, calorie_window_pct, protein_g, carbs_g, fat_g, carbs_are_ceiling, water_goal_ml, rest_days")
+      .select("calorie_target, calorie_window_pct, protein_g, carbs_g, fat_g, carbs_are_ceiling, fiber_g, water_goal_ml, rest_days")
       .lte("effective_from", date)
       .order("effective_from", { ascending: false })
       .limit(1)
@@ -89,7 +95,7 @@ export async function loadToday(): Promise<Today> {
   const ids = (type: string) => evs.filter((e) => e.type === type).map((e) => e.id as number);
 
   // Detail rows for today's events.
-  const [water, selfCare, weighIns, sessions, sets, prs, skips] = await Promise.all([
+  const [water, selfCare, weighIns, sessions, sets, prs, skips, stackLog] = await Promise.all([
     ids("water").length ? supabase.from("water_log").select("event_id, ml").in("event_id", ids("water")) : null,
     ids("self_care").length
       ? supabase.from("self_care_log").select("event_id, category_id").in("event_id", ids("self_care"))
@@ -111,6 +117,13 @@ export async function loadToday(): Promise<Today> {
       ? supabase.from("workout_prs").select("event_id, is_pr").eq("local_date", date).eq("is_pr", true)
       : null,
     ids("skip").length ? supabase.from("skips").select("event_id, reason").in("event_id", ids("skip")) : null,
+    // What was in each stack taken today, with its fiber per serving.
+    ids("stack_taken").length
+      ? supabase
+          .from("stack_log")
+          .select("servings, supplements (supplement_nutrients (amount_per_serving, nutrients (code)))")
+          .in("event_id", ids("stack_taken"))
+      : null,
   ]);
   const rows = <T,>(r: { data: T[] | null; error: { message: string } | null } | null): T[] =>
     r ? (must(r) ?? []) : [];
@@ -163,6 +176,13 @@ export async function loadToday(): Promise<Today> {
   const weigh = (rows(weighIns) as { event_id: number; weight_kg: number }[]).sort((a, b) => b.event_id - a.event_id)[0];
   const skip = (rows(skips) as { event_id: number; reason: "injury" | "sick" | "skipped" }[]).sort((a, b) => b.event_id - a.event_id)[0];
   const rec = must(recovery);
+  const stackFiber = (rows(stackLog) as unknown as {
+    servings: number;
+    supplements: { supplement_nutrients: { amount_per_serving: number; nutrients: { code: string } | null }[] } | null;
+  }[]).reduce((sum, l) => {
+    const f = l.supplements?.supplement_nutrients.find((n) => n.nutrients?.code === "fiber");
+    return sum + (f ? Number(f.amount_per_serving) * Number(l.servings) : 0);
+  }, 0);
   const isoDow = ((d.getUTCDay() + 6) % 7) + 1;
 
   return {
@@ -179,6 +199,7 @@ export async function loadToday(): Promise<Today> {
           carbs_g: s.carbs_g,
           fat_g: s.fat_g,
           carbs_are_ceiling: s.carbs_are_ceiling,
+          fiber_g: s.fiber_g ?? fiberSuggestion(s.calorie_target),
           water_goal_ml: s.water_goal_ml,
         }
       : null,
@@ -197,6 +218,7 @@ export async function loadToday(): Promise<Today> {
         serving: Number(i.servings) === 1 ? (i.supplements?.serving_label ?? "1 serving") : `${Number(i.servings)} × ${i.supplements?.serving_label ?? "serving"}`,
       })),
       taken: stackTaken ? { eventId: stackTaken, at: at(stackTaken) } : null,
+      fiberG: stackFiber,
     },
     selfCare: ((must(categories) ?? []) as { id: number; name: string; weight: number }[]).map((c) => ({
       id: c.id,

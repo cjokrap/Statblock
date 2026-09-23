@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { saveSettings, type FormState } from "@/app/actions/settings";
 import {
   EATING_STYLES,
+  fiberSuggestion,
   macroKcal,
   macrosFor,
   ML_PER_OZ,
@@ -25,6 +26,7 @@ export type SettingsInitial = {
   fat_g: number;
   carbs_are_ceiling: boolean;
   count_net_carbs: boolean;
+  fiber_g: number | null;
   water_goal_ml: number;
   training_days_per_week: number;
   rest_days: number[];
@@ -59,6 +61,7 @@ export function SettingsForm({
   });
   const [ceiling, setCeiling] = useState(initial.carbs_are_ceiling);
   const [netCarbs, setNetCarbs] = useState(initial.count_net_carbs);
+  const [fiber, setFiber] = useState(initial.fiber_g === null ? "" : String(initial.fiber_g));
   const [waterUnit, setWaterUnit] = useState(initial.water_unit);
   const [water, setWater] = useState(
     String(initial.water_unit === "oz" ? Math.round(initial.water_goal_ml / ML_PER_OZ) : initial.water_goal_ml),
@@ -201,6 +204,19 @@ export function SettingsForm({
               Count net carbs (total minus fiber)
             </label>
             <span className={styles.hint}>Suggested protein range: 0.7–1.0 g per lb of goal weight</span>
+            <div className={styles.macroRow}>
+              <label htmlFor="fiber_g">Fiber goal</label>
+              <span className={styles.inputWithUnit}>
+                <input id="fiber_g" name="fiber_g" inputMode="numeric" value={fiber}
+                  placeholder={kcalN !== null ? String(fiberSuggestion(kcalN)) : ""}
+                  onChange={(e) => setFiber(e.target.value)} className={styles.number} />
+                <span className={styles.unit}>g</span>
+              </span>
+            </div>
+            <span className={styles.hint}>
+              Leave blank for the suggestion: 14 g per 1,000 kcal (Dietary Guidelines for Americans). Counts food
+              and your daily stack.
+            </span>
           </div>
           <div className={styles.row}>
             <span className={styles.rowText}>

@@ -23,6 +23,7 @@ export type SettingsRow = {
   fat_g: number;
   carbs_are_ceiling: boolean;
   count_net_carbs: boolean;
+  fiber_g: number | null; // null: the suggestion (fiberSuggestion)
   water_goal_ml: number;
   training_days_per_week: number;
   rest_days: number[];
@@ -56,7 +57,7 @@ export async function loadSettings(): Promise<SettingsData> {
       .from("user_settings")
       .select(
         "effective_from, calorie_target, calorie_window_pct, eating_style, protein_g, carbs_g, fat_g, " +
-          "carbs_are_ceiling, count_net_carbs, water_goal_ml, training_days_per_week, rest_days",
+          "carbs_are_ceiling, count_net_carbs, fiber_g, water_goal_ml, training_days_per_week, rest_days",
       )
       .lte("effective_from", today.data)
       .order("effective_from", { ascending: false })
@@ -110,24 +111,36 @@ export async function loadSettings(): Promise<SettingsData> {
   };
 }
 
-// The active daily stack, for Settings.
-export async function loadStack(): Promise<{ id: number; name: string; serving: string }[]> {
+// The active daily stack, for Settings, with each supplement's fiber per
+// serving (g) when it's set.
+export async function loadStack(): Promise<
+  { id: number; supplementId: number; name: string; serving: string; fiberG: number | null }[]
+> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("daily_stack_items")
-    .select("id, servings, sort, supplements (name, serving_label)")
+    .select("id, servings, sort, supplements (id, name, serving_label, supplement_nutrients (amount_per_serving, nutrients (code)))")
     .eq("active", true)
     .order("sort");
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as {
     id: number;
-    servings: number;
-    supplements: { name: string; serving_label: string } | null;
-  }[]).map((i) => ({
-    id: i.id,
-    name: i.supplements?.name ?? "Supplement",
-    serving: i.supplements?.serving_label ?? "1 serving",
-  }));
+    supplements: {
+      id: number;
+      name: string;
+      serving_label: string;
+      supplement_nutrients: { amount_per_serving: number; nutrients: { code: string } | null }[];
+    } | null;
+  }[]).map((i) => {
+    const fiber = i.supplements?.supplement_nutrients.find((n) => n.nutrients?.code === "fiber");
+    return {
+      id: i.id,
+      supplementId: i.supplements?.id ?? 0,
+      name: i.supplements?.name ?? "Supplement",
+      serving: i.supplements?.serving_label ?? "1 serving",
+      fiberG: fiber ? Number(fiber.amount_per_serving) : null,
+    };
+  });
 }
 
 // The Liftosaur connection as the user may see it (never the key).

@@ -33,6 +33,7 @@ export default async function SettingsPage({ searchParams }: Props) {
       fat_g: q("fat") ?? m.fat_g,
       carbs_are_ceiling: m.carbs_are_ceiling,
       count_net_carbs: m.count_net_carbs,
+      fiber_g: null,
       water_goal_ml: q("water_ml") ?? rules.suggestions?.water_ml?.[profile.sex ?? "male"] ?? 2957,
       training_days_per_week: q("training") ?? 4,
       rest_days:

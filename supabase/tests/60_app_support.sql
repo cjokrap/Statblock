@@ -167,4 +167,16 @@ do $$ begin
 end $$;
 reset role;
 
+-- Fiber goal: optional, 0-150 g, and settings_for returns it.
+update public.user_settings set fiber_g = 35 where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+do $$ begin
+  assert (public.settings_for('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', (now() at time zone 'Pacific/Kiritimati')::date)).fiber_g = 35,
+         'settings_for carries the fiber goal';
+  begin
+    update public.user_settings set fiber_g = 500;
+    assert false, 'a 500 g fiber goal is refused';
+  exception when check_violation then null;
+  end;
+end $$;
+
 select 'all app support tests passed' as result;

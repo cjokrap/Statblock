@@ -44,6 +44,7 @@ export type Per100 = {
   protein_100g: number | null;
   carbs_100g: number | null;
   fat_100g: number | null;
+  fiber_100g?: number | null;
 };
 
 export function forGrams(food: Per100, grams: number) {
@@ -53,6 +54,7 @@ export function forGrams(food: Per100, grams: number) {
     protein: (food.protein_100g ?? 0) * f,
     carbs: (food.carbs_100g ?? 0) * f,
     fat: (food.fat_100g ?? 0) * f,
+    fiber: (food.fiber_100g ?? 0) * f,
   };
 }
 

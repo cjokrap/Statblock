@@ -153,6 +153,8 @@ export async function saveSettings(_prev: FormState, formData: FormData): Promis
   const protein = int("protein_g");
   const carbs = int("carbs_g");
   const fat = int("fat_g");
+  const fiberRaw = String(formData.get("fiber_g") ?? "").trim();
+  const fiber = fiberRaw === "" ? null : int("fiber_g");
   const water = parseNumber(formData.get("water"));
   const training = trainingDays(formData);
   const weightUnit = formData.get("weight_unit");
@@ -165,6 +167,7 @@ export async function saveSettings(_prev: FormState, formData: FormData): Promis
   if (protein === null || protein < 0 || protein > 600) return { error: "Protein must be 0 to 600 g." };
   if (carbs === null || carbs < 0 || carbs > 1000) return { error: "Carbs must be 0 to 1,000 g." };
   if (fat === null || fat < 0 || fat > 400) return { error: "Fat must be 0 to 400 g." };
+  if (fiberRaw !== "" && (fiber === null || fiber < 0 || fiber > 150)) return { error: "Fiber must be 0 to 150 g." };
   if (weightUnit !== "lb" && weightUnit !== "kg") return { error: "Pick a weight unit." };
   if (waterUnit !== "oz" && waterUnit !== "ml") return { error: "Pick a water unit." };
   const waterMl = water === null ? null : Math.round(waterUnit === "oz" ? water * ML_PER_OZ : water);
@@ -191,6 +194,7 @@ export async function saveSettings(_prev: FormState, formData: FormData): Promis
     fat_g: fat,
     carbs_are_ceiling: formData.get("carbs_are_ceiling") === "on",
     count_net_carbs: formData.get("count_net_carbs") === "on",
+    fiber_g: fiber,
     water_goal_ml: waterMl,
     training_days_per_week: training,
     rest_days: restDays(formData),
@@ -207,7 +211,9 @@ export async function saveSettings(_prev: FormState, formData: FormData): Promis
 export async function addStackItem(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim().slice(0, 120);
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 60) || "1 serving";
+  const fiber = parseNumber(formData.get("fiber"));
   if (!name) return;
+  if (fiber !== null && (fiber < 0 || fiber > 100)) throw new Error("Fiber must be 0 to 100 g per serving");
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   const uid = auth?.claims?.sub;
@@ -223,6 +229,7 @@ export async function addStackItem(formData: FormData) {
     .from("daily_stack_items")
     .insert({ user_id: uid, supplement_id: sup.data.id, sort: count.count ?? 0 });
   if (item.error) throw new Error(item.error.message);
+  if (fiber) await writeFiber(supabase, sup.data.id, fiber);
   await supabase.rpc("rescore_me"); // the "Take the stack" quest now applies
   revalidatePath("/", "layout");
 }
@@ -234,5 +241,34 @@ export async function removeStackItem(formData: FormData) {
   const { error } = await supabase.from("daily_stack_items").update({ active: false }).eq("id", id);
   if (error) throw new Error(error.message);
   await supabase.rpc("rescore_me");
+  revalidatePath("/", "layout");
+}
+
+// A supplement's fiber per serving, in supplement_nutrients (RLS: the
+// user's own custom supplements only). 0 or blank removes it.
+async function writeFiber(supabase: Supabase, supplementId: number, grams: number | null) {
+  const nutrient = await supabase.from("nutrients").select("id").eq("code", "fiber").single();
+  if (nutrient.error) throw new Error(nutrient.error.message);
+  const del = await supabase
+    .from("supplement_nutrients")
+    .delete()
+    .eq("supplement_id", supplementId)
+    .eq("nutrient_id", nutrient.data.id);
+  if (del.error) throw new Error(del.error.message);
+  if (grams && grams > 0) {
+    const ins = await supabase
+      .from("supplement_nutrients")
+      .insert({ supplement_id: supplementId, nutrient_id: nutrient.data.id, amount_per_serving: grams });
+    if (ins.error) throw new Error(ins.error.message);
+  }
+}
+
+export async function setStackFiber(formData: FormData) {
+  const supplementId = Number(formData.get("supplement_id"));
+  const fiber = parseNumber(formData.get("fiber"));
+  if (!Number.isInteger(supplementId)) throw new Error("Invalid supplement");
+  if (fiber !== null && (fiber < 0 || fiber > 100)) throw new Error("Fiber must be 0 to 100 g per serving");
+  const supabase = await createClient();
+  await writeFiber(supabase, supplementId, fiber);
   revalidatePath("/", "layout");
 }
