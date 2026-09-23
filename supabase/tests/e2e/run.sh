@@ -73,3 +73,18 @@ cd "$work"
 [[ -d node_modules/playwright-core ]] || npm i --no-save --no-audit --no-fund playwright-core > /dev/null 2>&1
 cp "$root/supabase/tests/e2e/flow.mjs" .
 node flow.mjs "$shots"
+
+# What the flow saved, checked in the database.
+psql -X -q -v ON_ERROR_STOP=1 -d "$E2E_DB" <<'SQL'
+do $$ declare s public.user_settings; begin
+  select * into s from public.user_settings;
+  assert (select count(*) from public.user_settings) = 1, 'setup and settings on the same day make one row';
+  assert s.effective_from = (now() at time zone 'America/Chicago')::date, 'targets start today, Chicago time';
+  assert (s.calorie_target, s.protein_g, s.carbs_g, s.fat_g, s.eating_style::text, s.water_goal_ml, s.rest_days)
+       = (2000, 180, 170, 67, 'custom', 2957, '{3,7}'::smallint[]), 'saved settings: ' || s::text;
+  assert (select weight_kg from public.weigh_ins) = 99.8, '220 lb logged as a weigh-in';
+  assert (select (sex, birth_date, height_cm, goal_weight_kg) = ('male', date '1981-01-15', 177.8, 83.9)
+          from public.profiles), 'profile saved';
+end $$;
+SQL
+echo "database checks passed"

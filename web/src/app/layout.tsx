@@ -12,6 +12,8 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: "Statblock",
   description: "Food and workout tracking that plays like a D&D character sheet.",
+  // Full screen from the iPhone home screen (the icon is app/apple-icon.png).
+  appleWebApp: { capable: true, title: "Statblock", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

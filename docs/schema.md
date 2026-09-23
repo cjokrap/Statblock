@@ -48,9 +48,10 @@ Liftosaur sync and rules engine tests.
 2. **Void events instead of deletes.** Keeps an honest ledger and makes XP
    replay deterministic. Trade-off: every read goes through `live_events`.
    If that gets slow, add a `voided_event_ids` materialized set.
-3. **Settings edits allowed for today and future rows only.** Uses the
-   database's `current_date` (UTC on Supabase), so late-evening Central edits
-   may count as "tomorrow". Could switch to the profile time zone.
+3. **Settings rows can be added or edited for today and later only.** "Today"
+   is `my_today()`, the caller's date in `profiles.timezone` (migration
+   `20260926000100_settings_local_date.sql`; it used to be the UTC
+   `current_date`, which refused evening edits in Chicago).
 4. **No XP for self-care.** CHA only, per the design. Easy to add in rules.
 5. **Rules as JSON in `rules_config`.** Flexible, but the rules engine has to
    validate shapes. A JSON Schema check per key could come later.

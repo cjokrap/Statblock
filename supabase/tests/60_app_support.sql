@@ -46,4 +46,40 @@ do $$ begin
 end $$;
 reset role;
 
+-- Settings follow the user's own calendar day (profiles.timezone), not UTC.
+-- Kiritimati (UTC+14) is always 1-2 days ahead of Etc/GMT+12 (UTC-12).
+update public.profiles set timezone = 'Pacific/Kiritimati' where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
+do $$
+declare
+  today date := (now() at time zone 'Pacific/Kiritimati')::date;
+  behind date := (now() at time zone 'Etc/GMT+12')::date;
+begin
+  assert public.my_today() = today, 'my_today() is the date in the profile time zone';
+  insert into public.user_settings (user_id, effective_from, calorie_target, protein_g, carbs_g, fat_g, water_goal_ml)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', today, 2000, 180, 170, 67, 2957);
+  update public.user_settings set calorie_target = 2100 where effective_from = today;
+  assert (select calorie_target from public.user_settings where effective_from = today) = 2100,
+         'today''s row (in the user''s time zone) can be edited';
+  begin
+    insert into public.user_settings (user_id, effective_from, calorie_target, protein_g, carbs_g, fat_g, water_goal_ml)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', behind, 1500, 180, 170, 67, 2957);
+    assert false, 'a row starting in the past can''t be added';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', false);
+do $$ begin
+  assert public.my_today() = (now() at time zone 'America/Chicago')::date, 'B''s day is in B''s time zone';
+  assert not exists (select 1 from public.user_settings), 'B can''t see A''s settings';
+  begin
+    insert into public.user_settings (user_id, effective_from, calorie_target, protein_g, carbs_g, fat_g, water_goal_ml)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', public.my_today() + 1, 1500, 180, 170, 67, 2957);
+    assert false, 'B can''t add settings for A';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+
 select 'all app support tests passed' as result;

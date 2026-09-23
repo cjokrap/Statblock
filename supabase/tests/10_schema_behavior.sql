@@ -32,10 +32,13 @@ insert into public.supplements (source, source_id, name, brand) values
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
 
--- Effective-dated settings
+-- Effective-dated settings. Users can only add rows from today on, so the
+-- dated rows go in as the owner (60_app_support.sql tests the policies).
+reset role;
 insert into public.user_settings (user_id, effective_from, calorie_target, protein_g, carbs_g, fat_g, water_goal_ml, rest_days)
 values (:A, date '2026-09-01', 2000, 180, 170, 67, round(public.oz_to_ml(100)), '{3,7}'),
        (:A, date '2026-10-01', 1900, 180, 150, 64, round(public.oz_to_ml(100)), '{3,7}');
+set role authenticated;
 
 do $$ begin
   assert (public.settings_for('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', date '2026-09-22')).calorie_target = 2000,

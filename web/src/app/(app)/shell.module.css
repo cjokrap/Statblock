@@ -40,3 +40,36 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+a.linkButton {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.setupBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 2px solid var(--red);
+  border-radius: 14px;
+  background: var(--red-tint);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.setupTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--red-dark);
+}

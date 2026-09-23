@@ -1,0 +1,541 @@
+/* Setup and Settings, from the mockup's Setup and Settings artboards. */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 12px 16px 32px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -10px;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.setupTitle {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lead {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.plainTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sectionLink {
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.padCard {
+  composes: card;
+  padding: 14px;
+  gap: 12px;
+}
+
+.row {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.stack {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.stack:last-child {
+  border-bottom: none;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.smallLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.good {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.warn {
+  font-size: 12px;
+  color: var(--red);
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.span2 {
+  grid-column: span 2;
+}
+
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--parchment);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.inputWithUnit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.number {
+  width: 84px;
+  min-height: 44px;
+  padding: 0 10px;
+  text-align: right;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--parchment);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.unit {
+  font-size: 14px;
+  color: var(--muted);
+  min-width: 30px;
+}
+
+.macroRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.macroShare {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Toggle groups */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.segment {
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segment[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--parchment);
+}
+
+.pills {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pills4 {
+  composes: pills;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pill {
+  min-height: 44px;
+  padding: 0 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pill[aria-pressed="true"] {
+  border: 2px solid var(--red);
+  background: var(--red-tint);
+  color: var(--red-dark);
+}
+
+.choice {
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.choice[aria-pressed="true"] {
+  border: 2px solid var(--red);
+  background: var(--red-tint);
+}
+
+.choiceName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.day {
+  min-height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.day[aria-pressed="true"] {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: var(--card);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stepButton {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 18px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.stepValue {
+  width: 28px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--red);
+}
+
+.select {
+  min-height: 44px;
+  max-width: 200px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--parchment);
+  font-size: 15px;
+  color: var(--ink);
+}
+
+/* Suggested targets (dark card, like the character sheet) */
+.suggest {
+  background: var(--sheet);
+  color: var(--parchment);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.suggestLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.kcal {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.kcalValue {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.kcalUnit {
+  font-size: 15px;
+  color: var(--sheet-muted);
+}
+
+.suggestGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+  margin: 0;
+}
+
+.suggestGrid div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.suggestGrid dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.suggestGrid dt {
+  font-size: 11px;
+  color: var(--sheet-muted);
+}
+
+.sources {
+  border-top: 1px solid var(--sheet-track);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--sheet-muted);
+  line-height: 1.4;
+}
+
+.sources strong {
+  color: var(--parchment);
+}
+
+.sheetNote {
+  font-size: 12px;
+  color: var(--sheet-muted);
+  line-height: 1.4;
+}
+
+/* The medical disclaimer: on every screen that shows targets. */
+.disclaimer {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.disclaimerDark {
+  composes: disclaimer;
+  border-color: var(--gold);
+  background: transparent;
+  color: var(--parchment);
+}
+
+.disclaimer svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.primary {
+  min-height: 52px;
+  border: none;
+  border-radius: 26px;
+  background: var(--red);
+  color: var(--card);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.secondary {
+  min-height: 48px;
+  border: none;
+  background: transparent;
+  color: var(--red);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--red-tint);
+  color: var(--red-dark);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.saved {
+  composes: notice;
+  border-color: var(--green);
+  color: var(--green);
+  font-weight: 600;
+}
