@@ -18,21 +18,29 @@ Liftosaur's API needs a Premium subscription.
    day a workout counts for.
 3. **Create a Liftosaur API key.** In Liftosaur, go to **Settings → API Keys
    → Create API Key**. It starts with `lftsk_`.
-4. **Store the key in Vault.** In the Supabase **SQL Editor**, run:
+4. **Connect it in the app.** Go to **Settings → Liftosaur → Connect**,
+   paste the key and tap **Check and connect**. The app checks the key with
+   Liftosaur (one `/history` request), then stores it with
+   `set_liftosaur_key` through a server action that uses the secret key.
+   The key is encrypted in Supabase Vault, and the `integrations` table
+   only holds its id. The screen shows the connection, the last sync, any
+   sync error and how many workouts were imported.
+
+   Without the app, the same thing works from the Supabase **SQL Editor**
+   (delete the query tab afterwards, since it saves the key in its text):
    ```sql
    select public.set_liftosaur_key(
      (select id from auth.users where email = 'you@example.com'),
      'lftsk_your_key_here');
    ```
-   The key is encrypted in Supabase Vault, and the `integrations` table only
-   holds its id. The SQL Editor saves query text, so delete that query tab
-   afterwards.
 5. **Run the first sync.** Go to **Actions → Liftosaur sync → Run
    workflow**. It loads your whole history. The log ends with a line like
    `N workouts in Liftosaur (full history); N new, ...`.
 
-To replace a key, run step 4 again with the new key. That also clears an
-error status.
+To replace a key, paste the new one on the same screen. That also clears an
+error status. **Disconnect Liftosaur** deletes the key from Vault
+(`disconnect_liftosaur`, migration `20260927000100`); workouts already
+imported stay.
 
 ## How it works
 

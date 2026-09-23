@@ -64,6 +64,7 @@ service=$(grep "^service key" "$work/gateway.log" | cut -d' ' -f3)
 cd web
 export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=$anon
 export SUPABASE_SECRET_KEY=$service FDC_API_KEY=e2e-fdc-key FDC_API_BASE=http://127.0.0.1:3002/fdc/v1
+export LIFTOSAUR_API_BASE=http://127.0.0.1:3002/liftosaur/api/v1
 npx next build > "$work/build.log" 2>&1
 start npx next start -p 3457 > "$work/next.log" 2>&1
 for _ in $(seq 50); do curl -fs -o /dev/null http://localhost:3457/login && break; sleep 0.2; done
@@ -89,6 +90,8 @@ do $$ declare s public.user_settings; begin
   assert (select count(*) from public.live_events where type in ('stack_taken', 'self_care')) = 2, 'stack and date night';
   assert (select completed_at is not null from public.quest_progress where quest_code = 'take_stack'),
          'the stack quest completed';
+  assert not exists (select 1 from public.integrations), 'Liftosaur connected, then disconnected';
+  assert not exists (select 1 from vault.secrets), 'disconnecting deleted the key';
   assert (select (sex, birth_date, height_cm, goal_weight_kg) = ('male', date '1981-01-15', 177.8, 83.9)
           from public.profiles), 'profile saved';
 end $$;

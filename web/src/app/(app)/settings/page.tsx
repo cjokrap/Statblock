@@ -1,4 +1,5 @@
-import { loadSettings, loadStack } from "@/lib/settings";
+import Link from "next/link";
+import { loadLiftosaur, loadSettings, loadStack } from "@/lib/settings";
 import { EATING_STYLES, isOneOf, macrosFor, parseNumber } from "@/lib/targets";
 import { BackLink } from "./parts";
 import { SettingsForm, type SettingsInitial } from "./SettingsForm";
@@ -10,7 +11,7 @@ export const metadata = { title: "Settings · Statblock" };
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function SettingsPage({ searchParams }: Props) {
-  const [sp, data, stack] = await Promise.all([searchParams, loadSettings(), loadStack()]);
+  const [sp, data, stack, lift] = await Promise.all([searchParams, loadSettings(), loadStack(), loadLiftosaur()]);
   const q = (k: string) => (typeof sp[k] === "string" ? parseNumber(sp[k]) : null);
   const { profile, settings, rules } = data;
 
@@ -73,6 +74,28 @@ export default async function SettingsPage({ searchParams }: Props) {
         saved={settings !== null}
       />
       <StackEditor items={stack} />
+      <section className={styles.section} aria-labelledby="liftosaur-heading">
+        <h2 id="liftosaur-heading" className={styles.sectionTitle}>
+          Liftosaur
+        </h2>
+        <div className={styles.card}>
+          <div className={styles.row}>
+            <span className={styles.rowText}>
+              <span className={styles.label}>Workout sync</span>
+              <span className={lift.status === "connected" ? styles.good : lift.status === "error" ? styles.warn : styles.hint}>
+                {lift.status === "connected"
+                  ? `Connected · ${lift.workouts.toLocaleString("en-US")} workouts`
+                  : lift.status === "error"
+                    ? "Needs a new key"
+                    : "Not connected"}
+              </span>
+            </span>
+            <Link href="/settings/liftosaur" className={styles.sectionLink}>
+              {lift.status ? "Manage" : "Connect"}
+            </Link>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

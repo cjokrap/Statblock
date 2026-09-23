@@ -129,3 +129,33 @@ export async function loadStack(): Promise<{ id: number; name: string; serving: 
     serving: i.supplements?.serving_label ?? "1 serving",
   }));
 }
+
+// The Liftosaur connection as the user may see it (never the key).
+export async function loadLiftosaur(): Promise<{
+  status: "connected" | "error" | "disconnected" | null;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+  workouts: number;
+  timezone: string;
+}> {
+  const supabase = await createClient();
+  const [integration, workouts, profile] = await Promise.all([
+    supabase
+      .from("integrations")
+      .select("status, last_synced_at, last_error")
+      .eq("provider", "liftosaur")
+      .maybeSingle(),
+    supabase.from("live_events").select("id", { count: "exact" }).eq("type", "workout_session").limit(1),
+    supabase.from("profiles").select("timezone").maybeSingle(),
+  ]);
+  for (const r of [integration, workouts, profile]) {
+    if (r.error) throw new Error(r.error.message || JSON.stringify(r.error));
+  }
+  return {
+    status: integration.data?.status ?? null,
+    lastSyncedAt: integration.data?.last_synced_at ?? null,
+    lastError: integration.data?.last_error ?? null,
+    workouts: workouts.count ?? 0,
+    timezone: profile.data?.timezone ?? "America/Chicago",
+  };
+}
