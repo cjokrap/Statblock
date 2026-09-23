@@ -159,3 +159,16 @@
   gap: 8px;
   margin-top: 8px;
 }
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 2px 16px;
+}
+
+.pager a {
+  color: var(--teal);
+  font-weight: 600;
+  text-decoration: none;
+  padding: 8px 0;
+}
