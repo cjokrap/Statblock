@@ -107,9 +107,11 @@ plan's disk, before the merge or search indexes. Packaged foods are covered
 two other ways instead:
 - **Barcodes:** Open Food Facts (`off_products`), which stores only the
   products actually scanned.
-- **Search (planned, with the app):** the FDC API, looked up on demand and
-  saving only foods that get logged. One user is far below its limit of
-  1,000 requests an hour.
+- **Search:** the app looks packaged foods up live in the FDC API
+  (`web/src/lib/fdc.ts`). It saves a product into `foods` (as
+  `usda_branded`, keyed on its fdc_id, the same as the bulk loader) only
+  when it's logged. One user is far below the API's limit of 1,000
+  requests an hour.
 
 `load.sh` can still load a Branded release by hand into a database with
 several GB free.

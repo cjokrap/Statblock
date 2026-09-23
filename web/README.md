@@ -26,6 +26,10 @@ npm run build
 - `src/lib/character.ts`: loads the character sheet with the user's session.
   RLS limits every query to their own rows.
 - `src/lib/game.ts`: level, modifier and trend math for display.
+- `src/lib/fdc.ts`, `fdcParse.ts`, `brandedImport.ts`: live USDA packaged-food
+  search, and saving a product the first time it's logged.
+- `src/lib/supabase/admin.ts`: the secret-key client. Server-only; used only
+  for that save.
 - `src/app/login/`: sign-in (email + password).
 - `src/app/(app)/`: signed-in screens.
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fdcConfigured, searchBranded } from "@/lib/fdc";
 import { searchFoods, userTimezone } from "@/lib/food";
 import { isMeal, localNow, MEAL_LABEL, MEALS, mealForHour } from "@/lib/meals";
 import styles from "./log.module.css";
@@ -19,7 +20,14 @@ export default async function LogPage({ searchParams }: Props) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
   const meal = isMeal(sp.meal) ? sp.meal : mealForHour(localNow(await userTimezone()).hour);
-  const results = q ? await searchFoods(q) : [];
+  const [results, packagedAll] = await Promise.all([
+    q ? searchFoods(q) : [],
+    // A USDA outage shouldn't break the rest of search.
+    q ? searchBranded(q).catch(() => null) : [],
+  ]);
+  // Packaged foods already saved show up in the main results.
+  const saved = new Set(results.filter((f) => f.source === "usda_branded").map((f) => f.source_id));
+  const packaged = packagedAll?.filter((f) => !saved.has(String(f.fdcId))) ?? null;
 
   return (
     <main className={styles.main}>
@@ -66,7 +74,7 @@ export default async function LogPage({ searchParams }: Props) {
         </button>
       </form>
 
-      {q && results.length === 0 && (
+      {q && results.length === 0 && packaged?.length === 0 && (
         <p className={styles.empty}>
           No foods match &ldquo;{q}&rdquo;. Try fewer words, or a plainer name (&ldquo;beef&rdquo; rather than
           a brand).
@@ -92,6 +100,44 @@ export default async function LogPage({ searchParams }: Props) {
             ))}
           </ul>
         </>
+      )}
+      {q && q.trim().length >= 3 && (
+        <section aria-labelledby="packaged-heading" className={styles.packaged}>
+          <h2 id="packaged-heading" className={styles.hint}>
+            Packaged foods · USDA
+          </h2>
+          {!fdcConfigured() ? (
+            <p className={styles.empty}>
+              Packaged food search isn&apos;t set up yet. It needs FDC_API_KEY and SUPABASE_SECRET_KEY in the
+              Vercel settings.
+            </p>
+          ) : packaged === null ? (
+            <p className={styles.empty}>USDA&apos;s food database didn&apos;t answer. Try again in a moment.</p>
+          ) : packaged.length === 0 ? (
+            <p className={styles.empty}>No packaged foods match.</p>
+          ) : (
+            <ul className={styles.results}>
+              {packaged.map((f) => (
+                <li key={f.fdcId}>
+                  <Link
+                    href={`/log/branded/${f.fdcId}?meal=${meal}&q=${encodeURIComponent(q)}`}
+                    className={styles.result}
+                  >
+                    <span className={styles.resultText}>
+                      <span className={styles.resultName}>{f.name}</span>
+                      <span className={styles.resultMeta}>
+                        {f.brand ? `${f.brand} · ` : ""}
+                        {Math.round(f.kcal ?? 0)} kcal · {Math.round(f.protein ?? 0)} g protein per 100 g
+                        {f.serving ? ` · ${f.serving.label}` : ""}
+                      </span>
+                    </span>
+                    <span className={styles.badge}>Brand</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
     </main>
   );

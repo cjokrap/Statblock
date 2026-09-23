@@ -102,4 +102,5 @@ class H(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     print("anon key:", jwt({"role": "anon", "iss": "supabase", "iat": 0, "exp": 4102444800}))
+    print("service key:", jwt({"role": "service_role", "iss": "supabase", "iat": 0, "exp": 4102444800}), flush=True)
     ThreadingHTTPServer(("127.0.0.1", 54321), H).serve_forever()

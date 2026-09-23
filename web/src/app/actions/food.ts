@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { importBrandedFood } from "@/lib/brandedImport";
+import { getBranded } from "@/lib/fdc";
 import { createClient } from "@/lib/supabase/server";
 import { isMeal } from "@/lib/meals";
 
@@ -40,4 +42,35 @@ export async function removeFood(formData: FormData) {
   if (error) throw new Error(error.message);
   await rescore(supabase);
   revalidatePath("/");
+}
+
+// Log a USDA packaged food by its FDC id. The product is fetched from USDA
+// here on the server (never taken from the browser), saved to the shared
+// foods table the first time, then logged like any other food.
+export async function logBrandedFood(formData: FormData) {
+  const fdcId = Number(formData.get("fdc_id"));
+  const grams = Number(formData.get("grams"));
+  const meal = formData.get("meal");
+  const portion = String(formData.get("portion_label") ?? "").trim() || null;
+  if (!Number.isInteger(fdcId) || !(grams > 0 && grams < 100000) || !isMeal(meal)) {
+    throw new Error("Invalid food log");
+  }
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) throw new Error("Not signed in");
+
+  const food = await getBranded(fdcId);
+  if (!food) throw new Error("USDA doesn't have that product any more");
+  const foodId = await importBrandedFood(food);
+
+  const { error } = await supabase.rpc("log_food", {
+    p_food_id: foodId,
+    p_grams: Math.round(grams * 100) / 100,
+    p_meal: meal,
+    p_portion_label: portion,
+  });
+  if (error) throw new Error(error.message);
+  await rescore(supabase);
+  revalidatePath("/");
+  redirect("/");
 }
