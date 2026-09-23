@@ -113,4 +113,22 @@ do $$ begin
   assert not exists (select 1 from vault.secrets), 'disconnect deletes the key from Vault';
 end $$;
 
+-- Open Food Facts foods: allowed as a source, ranked with packaged foods,
+-- and written by the server only.
+insert into public.foods (source, source_id, name, barcode, kcal_100g)
+values ('off', '0811620022002', 'Core Power Chocolate', '0811620022002', 41);
+do $$ begin
+  assert (select source_rank from public.foods where source = 'off') = 3, 'OFF foods rank as packaged';
+end $$;
+set role authenticated;
+do $$ begin
+  assert (select count(*) from public.search_foods('core power')) = 1, 'OFF foods show in search';
+  begin
+    insert into public.foods (source, source_id, name) values ('off', '1', 'Mine');
+    assert false, 'clients can''t add OFF foods';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+
 select 'all app support tests passed' as result;

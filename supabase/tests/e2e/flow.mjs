@@ -231,6 +231,33 @@ await page.click("button:has-text('Disconnect Liftosaur')");
 await page.waitForSelector("p[role=status]:has-text('Disconnected')");
 step("liftosaur: disconnected -> " + (await page.textContent("section[aria-labelledby=status-heading] [class*=hint]")));
 
+// Barcodes: typed in on the scan page (no camera in headless Chromium).
+await page.goto(BASE + "/log?meal=snack");
+await page.click("a:has-text('Scan a barcode')");
+await page.waitForSelector("#barcode");
+await page.fill("#barcode", "99999999");
+await page.click("button:has-text('Look up')");
+await page.waitForSelector("p[role=alert]:has-text('Open Food Facts doesn')");
+step("unknown barcode: not found message");
+await page.goto(BASE + "/log/scan?meal=snack");
+await page.fill("#barcode", "850000000123"); // UPC-A form of the OFF product's EAN-13
+await page.click("button:has-text('Look up')");
+await page.waitForSelector("#qty");
+const barName = await page.textContent("h1");
+const barOptions = await page.$$eval("#unit option", (o) => o.map((x) => x.textContent));
+step(`scanned: ${barName} · ${barOptions[0]} · ${await page.textContent("dl div:first-child dd")} kcal`);
+if (barOptions[0] !== "1 bar (55 g)" || !(await page.textContent("main")).includes("Open Food Facts")) throw new Error("OFF product page");
+await page.click("button[type=submit]");
+await page.waitForFunction(() => [...document.querySelectorAll('[class*="itemName"]')].some((e) => e.textContent.includes("Protein Bar")));
+step("bar logged to snacks");
+// Scanning it again opens the saved food; so does a USDA product's barcode.
+await page.goto(BASE + "/log/barcode/0850000000123?meal=snack");
+await page.waitForURL(/\/log\/food\/\d+/);
+step("rescan -> saved food: " + (await page.textContent("main p")));
+await page.goto(BASE + "/log/barcode/818290014108?meal=snack");
+await page.waitForURL(/\/log\/food\/\d+/);
+step("Chobani barcode -> saved USDA food: " + (await page.textContent("h1")));
+
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
 if (errors.length) process.exit(1);

@@ -95,7 +95,7 @@ steps are in `docs/database.md`.
 | --- | --- | --- |
 | USDA FoodData Central | Primary food data | Public domain. Bulk-load Foundation, SR Legacy and Survey. Branded (about 2M products) is too big for Supabase free, so it's not bulk-loaded; the app looks packaged foods up live through the FDC API (`FDC_API_KEY`, 1,000 requests/hour) and saves only the ones logged, server-side with `SUPABASE_SECRET_KEY`. Whole foods (Foundation, SR Legacy) rank first in search. |
 | NIH DSLD | Supplement labels | CC0 |
-| Open Food Facts | Barcodes | ODbL share-alike. Keep in `off_products`, separate from `foods`. |
+| Open Food Facts | Barcodes | ODbL share-alike. Looked up live when a barcode is scanned (`web/src/lib/off.ts`). Only products a user logs are saved: the original JSON in `off_products` and a `foods` row with source `off` (individual products are an insubstantial part of OFF). Credit Open Food Facts wherever the data shows. Never bulk-load it into `foods`. |
 | FatSecret | Gap filler | Do not store results. Caching isn't part of the free Basic tier. |
 | Liftosaur API | Workout history | User's own Premium key, stored in Supabase Vault via `set_liftosaur_key` (service role only). Sent as `Authorization: Bearer lftsk_...`. Endpoints: `GET /api/v1/history` and `GET /api/v1/programs/:id` (for tiers). With `startDate`, the API ignores `cursor`. Liftosaur is open source (github.com/astashov/liftosaur); its grammar and serializer are the format reference. |
 

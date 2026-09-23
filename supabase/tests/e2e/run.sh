@@ -64,7 +64,7 @@ service=$(grep "^service key" "$work/gateway.log" | cut -d' ' -f3)
 cd web
 export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=$anon
 export SUPABASE_SECRET_KEY=$service FDC_API_KEY=e2e-fdc-key FDC_API_BASE=http://127.0.0.1:3002/fdc/v1
-export LIFTOSAUR_API_BASE=http://127.0.0.1:3002/liftosaur/api/v1
+export LIFTOSAUR_API_BASE=http://127.0.0.1:3002/liftosaur/api/v1 OFF_API_BASE=http://127.0.0.1:3002/off/api/v2
 npx next build > "$work/build.log" 2>&1
 start npx next start -p 3457 > "$work/next.log" 2>&1
 for _ in $(seq 50); do curl -fs -o /dev/null http://localhost:3457/login && break; sleep 0.2; done
@@ -92,6 +92,12 @@ do $$ declare s public.user_settings; begin
          'the stack quest completed';
   assert not exists (select 1 from public.integrations), 'Liftosaur connected, then disconnected';
   assert not exists (select 1 from vault.secrets), 'disconnecting deleted the key';
+  assert (select count(*) from public.foods where source = 'off') = 1, 'the scanned bar was saved once';
+  assert (select count(*) from public.off_products) = 1, 'with its OFF record';
+  assert (select count(*) from public.food_nutrients n join public.foods f on f.id = n.food_id
+          where f.source = 'off') = 7, 'energy, macros, fiber, sodium and calcium';
+  assert (select grams from public.food_log l join public.foods f on f.id = l.food_id where f.source = 'off') = 55,
+         'one bar logged';
   assert (select (sex, birth_date, height_cm, goal_weight_kg) = ('male', date '1981-01-15', 177.8, 83.9)
           from public.profiles), 'profile saved';
 end $$;

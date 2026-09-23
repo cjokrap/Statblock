@@ -17,6 +17,7 @@ const SOURCE_NOTE: Record<string, string> = {
   usda_sr_legacy: "USDA SR Legacy · full micronutrient profile",
   usda_survey: "USDA survey dish (FNDDS)",
   usda_branded: "Packaged food · USDA Branded",
+  off: "Packaged food · data from Open Food Facts (ODbL)",
 };
 
 export default async function FoodPage({ params, searchParams }: Props) {
