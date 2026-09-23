@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { signIn, type SignInState } from "./actions";
 import styles from "./login.module.css";
 
-const initial: SignInState = { error: null };
+const initial: SignInState = { error: null, email: "" };
 
 export function SignInForm() {
   const [state, action, pending] = useActionState(signIn, initial);
@@ -12,7 +12,7 @@ export function SignInForm() {
     <form action={action} className={styles.form}>
       <label className={styles.field}>
         <span>Email</span>
-        <input name="email" type="email" autoComplete="email" required />
+        <input name="email" type="email" autoComplete="email" required defaultValue={state.email} />
       </label>
       <label className={styles.field}>
         <span>Password</span>

@@ -13,8 +13,11 @@ create table auth.users (
   email text,
   raw_user_meta_data jsonb not null default '{}'
 );
+-- Like Supabase's: the legacy per-claim setting, or the claims JSON that
+-- current PostgREST sets.
 create function auth.uid() returns uuid language sql stable as
-  $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  $$ select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''),
+                     (nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub'))::uuid $$;
 
 create schema storage;
 create table storage.buckets (

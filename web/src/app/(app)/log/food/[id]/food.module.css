@@ -1,0 +1,145 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 32px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -10px;
+}
+
+.back {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+}
+
+.crumb {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.foodHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.source {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.amountRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.amountLabel {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.qty {
+  width: 80px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--parchment);
+  color: var(--ink);
+  font-size: 16px;
+}
+.qty[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.unit {
+  flex-grow: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--parchment);
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.macros {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+}
+
+.macros div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.macros dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.macros dd {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.grams {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.submit {
+  min-height: 50px;
+  border: none;
+  border-radius: 25px;
+  background: var(--red);
+  color: var(--card);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

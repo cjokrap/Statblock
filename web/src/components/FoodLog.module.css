@@ -1,0 +1,147 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.addButton {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 22px;
+  background: var(--red);
+  color: var(--card);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.addButton:hover {
+  color: var(--card);
+  background: var(--red-dark);
+}
+
+.totals {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.recents {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recentsLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.meals {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.meal {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--divider);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.meal:last-child {
+  border-bottom: none;
+}
+
+.mealHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.mealName {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.mealKcal {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.itemName {
+  flex-grow: 1;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.itemKcal {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.remove {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.remove:hover {
+  color: var(--red);
+}
+
+.addMeal {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
