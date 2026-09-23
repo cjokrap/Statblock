@@ -156,6 +156,55 @@ if ((await page.inputValue("#calorie_target")) !== "2000") throw new Error("save
 const manifest = await (await fetch(BASE + "/manifest.webmanifest")).json();
 step(`manifest: ${manifest.name}, ${manifest.display}, ${manifest.icons.length} icons`);
 if (manifest.display !== "standalone") throw new Error("manifest should open full screen");
+// Settings: add a supplement to the daily stack.
+await page.goto(BASE + "/settings");
+await page.fill("#stack-name", "Multivitamin");
+await page.fill("#stack-serving", "1 tablet");
+await page.click("button:has-text('+ Add to stack')");
+await page.waitForSelector("button[aria-label='Remove Multivitamin']");
+step("stack: Multivitamin added");
+
+// The dashboard.
+await page.goto(BASE + "/");
+await page.waitForSelector("#hp-heading");
+const hpText = await page.textContent("section[aria-labelledby=hp-heading]");
+step("hit points: " + hpText.replace(/\s+/g, " ").slice(0, 120));
+const questNames = await page.$$eval("section[aria-labelledby=quests-heading] li", (els) => els.map((e) => e.textContent));
+step("quests: " + questNames.length + ", boss: " + (await page.textContent("[class*=bossName]")));
+if (!questNames.some((q) => q.includes("Take the daily stack") && q.includes("(open)"))) throw new Error("stack quest should be open");
+
+await page.click("button:has-text('Take stack')");
+await page.waitForSelector("text=Taken at");
+await page.waitForFunction(() => [...document.querySelectorAll("section[aria-labelledby=quests-heading] li")].some((e) => e.textContent.includes("Take the daily stack") && e.textContent.includes("(done)")));
+step("stack taken, quest done");
+
+const waterValue = () => page.textContent("section[aria-labelledby=water-heading] [class*=bigValue]");
+await page.click("button:has-text('+16 oz')");
+await page.waitForFunction(() => document.querySelector("section[aria-labelledby=water-heading] [class*=bigValue]")?.textContent === "16");
+await page.click("button:has-text('+32 oz')");
+await page.waitForFunction(() => document.querySelector("section[aria-labelledby=water-heading] [class*=bigValue]")?.textContent === "48");
+await page.click("button[aria-label='Undo the last water']");
+await page.waitForFunction(() => document.querySelector("section[aria-labelledby=water-heading] [class*=bigValue]")?.textContent === "16");
+step("water: +16, +32, undo -> " + (await waterValue()) + " oz");
+
+const training = (await page.textContent("section[aria-labelledby=training-heading]")).replace(/\s+/g, " ");
+step("training: " + training.slice(0, 160));
+if (!training.includes("Squat · T1 · 4×3 @ 275 lb") || !training.includes("New estimated 1RM: Squat 302 lb")) throw new Error("training card should show today's squats and the PR");
+if (!training.includes("Leg Press · T2 · 2×10 @ 220 lb")) throw new Error("training card should show leg press");
+
+await page.click("section[aria-labelledby=quick-heading] button:has-text('Date night')");
+await page.waitForSelector("section[aria-labelledby=quick-heading] button[aria-label^='Date night, logged']");
+await page.click("summary:has-text('Weigh-in')");
+await page.fill("#weigh-weight", "219");
+await page.click("button:has-text('Log weight')");
+await page.waitForSelector("summary:has-text('Today: 219 lb')", { timeout: 8000 }).catch(async (e) => {
+  await page.screenshot({ path: `${out}/11-weigh-fail.png`, fullPage: true });
+  console.log("summary now:", await page.textContent("summary"), "errors:", errors);
+  throw e;
+});
+step("quick log: date night logged, weigh-in 219 lb");
+await page.screenshot({ path: `${out}/11-dashboard.png`, fullPage: true });
+
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
 if (errors.length) process.exit(1);

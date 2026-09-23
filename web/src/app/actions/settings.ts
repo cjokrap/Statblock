@@ -96,7 +96,7 @@ export async function saveSetup(_prev: FormState, formData: FormData): Promise<F
   // The current weight is a weigh-in (it counts for CHA), unless it's
   // the same as the last one.
   if (data.latestWeightKg === null || Math.abs(data.latestWeightKg - weightKg) >= 0.05) {
-    const w = await supabase.rpc("log_weigh_in", { p_weight_kg: round1(weightKg) });
+    const w = await supabase.rpc("log_weigh_in", { p_weight_kg: Math.round(weightKg * 100) / 100 });
     if (w.error) return { error: `Couldn't save your weight: ${w.error.message}` };
   }
 
@@ -198,4 +198,41 @@ export async function saveSettings(_prev: FormState, formData: FormData): Promis
   if (error) return { error };
   revalidatePath("/", "layout");
   redirect("/settings?saved=1");
+}
+
+// ---- Daily stack ----------------------------------------------------------
+// Supplements are the user's own (custom) rows; DSLD label data isn't
+// loaded yet. Removing one deactivates it, so past stack logs keep pointing
+// at it.
+export async function addStackItem(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim().slice(0, 120);
+  const serving = String(formData.get("serving") ?? "").trim().slice(0, 60) || "1 serving";
+  if (!name) return;
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const uid = auth?.claims?.sub;
+  if (!uid) throw new Error("Not signed in");
+  const sup = await supabase
+    .from("supplements")
+    .insert({ source: "custom", owner_user_id: uid, name, serving_label: serving })
+    .select("id")
+    .single();
+  if (sup.error) throw new Error(sup.error.message);
+  const count = await supabase.from("daily_stack_items").select("id", { count: "exact", head: true });
+  const item = await supabase
+    .from("daily_stack_items")
+    .insert({ user_id: uid, supplement_id: sup.data.id, sort: count.count ?? 0 });
+  if (item.error) throw new Error(item.error.message);
+  await supabase.rpc("rescore_me"); // the "Take the stack" quest now applies
+  revalidatePath("/", "layout");
+}
+
+export async function removeStackItem(formData: FormData) {
+  const id = Number(formData.get("item_id"));
+  if (!Number.isInteger(id)) throw new Error("Invalid item");
+  const supabase = await createClient();
+  const { error } = await supabase.from("daily_stack_items").update({ active: false }).eq("id", id);
+  if (error) throw new Error(error.message);
+  await supabase.rpc("rescore_me");
+  revalidatePath("/", "layout");
 }

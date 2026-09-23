@@ -1,0 +1,435 @@
+/* Today dashboard cards, from the mockup's dashboard artboard. */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.plainTitle {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.xp {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7a5410;
+  white-space: nowrap;
+}
+
+.good {
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* Hit points */
+.big {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bigValue {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bigUnit {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.hpBar {
+  position: relative;
+  height: 16px;
+  background: var(--divider);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.hpWindow {
+  position: absolute;
+  top: 0;
+  height: 16px;
+  background: #cfe0c9;
+}
+
+.hpFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 16px;
+  background: var(--red);
+  border-radius: 8px;
+}
+
+.hpFillOver {
+  composes: hpFill;
+  background: #7a5410;
+}
+
+.hpLegend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hpWindowLabel {
+  color: var(--green);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.macros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.macro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.macroTop {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.macroName {
+  font-weight: 600;
+}
+
+.bar {
+  height: 8px;
+  background: var(--divider);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* Quests */
+.quests {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quest {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.questBox {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  border: 2px dotted #b8ac98;
+  background: var(--parchment);
+}
+
+.questDone {
+  composes: questBox;
+  border: none;
+  background: var(--green);
+}
+
+.questText {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.questName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.questDetail {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.boss {
+  background: var(--teal);
+  color: var(--parchment);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bossLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.bossLabel strong {
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.bossName {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.bossText {
+  font-size: 13px;
+}
+
+.bossBar {
+  height: 8px;
+  background: #1e3f42;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bossFill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 4px;
+}
+
+/* Buttons */
+.row3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.row3 form,
+.row2 form {
+  display: contents;
+}
+
+.waterButton {
+  min-height: 44px;
+  border: 1px solid var(--teal);
+  background: transparent;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--teal);
+  cursor: pointer;
+}
+
+.plainButton {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.pillButton {
+  composes: plainButton;
+  border-radius: 22px;
+  font-size: 13px;
+}
+
+.primaryButton {
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  background: var(--red);
+  color: var(--card);
+  border-radius: 22px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.linkish {
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Training */
+.sets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.set {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.pr {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--card);
+  background: var(--red);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+.callout {
+  font-size: 13px;
+  background: var(--parchment);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Quick log */
+.chaButton {
+  width: 100%;
+  min-height: 56px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.chaButton span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chaDone {
+  composes: chaButton;
+  border-color: var(--red);
+  background: var(--red-tint);
+  color: var(--red-dark);
+}
+
+.weigh {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 12px;
+}
+
+.weigh summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.weigh summary::-webkit-details-marker {
+  display: none;
+}
+
+.weighForm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-bottom: 12px;
+}
+
+.weighInput {
+  width: 100px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--parchment);
+  font-size: 16px;
+  color: var(--ink);
+}
