@@ -1,5 +1,7 @@
 """A stand-in for the USDA FoodData Central API (Branded foods) for the e2e
-test: /fdc/v1/foods/search and /fdc/v1/food/{fdcId}, in FDC's shapes."""
+test: /fdc/v1/foods/search and /fdc/v1/food/{fdcId}, in FDC's shapes. Also
+Liftosaur's /liftosaur/api/v1/history, for checking a key: only keys starting
+lftsk_good are accepted."""
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -54,6 +56,10 @@ class H(BaseHTTPRequestHandler):
         self.end_headers(); self.wfile.write(data)
     def do_GET(self):
         u = urlparse(self.path); q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        if u.path == "/liftosaur/api/v1/history":
+            if not self.headers.get("Authorization", "").startswith("Bearer lftsk_good"):
+                return self.send(401, {"error": "Unauthorized"})
+            return self.send(200, {"data": {"records": [], "hasMore": False}})
         if q.get("api_key") != "e2e-fdc-key":
             return self.send(403, {"error": {"code": "API_KEY_INVALID"}})
         if u.path == "/fdc/v1/foods/search":

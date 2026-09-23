@@ -197,13 +197,39 @@ await page.waitForSelector("section[aria-labelledby=quick-heading] button[aria-l
 await page.click("summary:has-text('Weigh-in')");
 await page.fill("#weigh-weight", "219");
 await page.click("button:has-text('Log weight')");
-await page.waitForSelector("summary:has-text('Today: 219 lb')", { timeout: 8000 }).catch(async (e) => {
+await page.waitForSelector("summary:has-text('Today: 219 lb')").catch(async (e) => {
   await page.screenshot({ path: `${out}/11-weigh-fail.png`, fullPage: true });
   console.log("summary now:", await page.textContent("summary"), "errors:", errors);
   throw e;
 });
 step("quick log: date night logged, weigh-in 219 lb");
 await page.screenshot({ path: `${out}/11-dashboard.png`, fullPage: true });
+
+// Liftosaur: a rejected key, then a good one, then disconnect.
+await page.goto(BASE + "/settings");
+await page.click("a:has-text('Connect')");
+await page.waitForSelector("#api_key");
+await page.fill("#api_key", "not-a-key");
+await page.click("button:has-text('Check and connect')");
+await page.waitForSelector("p[role=alert]:has-text('lftsk_')");
+await page.fill("#api_key", "lftsk_wrong123");
+await page.click("button:has-text('Check and connect')");
+await page.waitForSelector("p[role=alert]:has-text('accept that key')");
+step("liftosaur: bad format and rejected key both refused");
+await page.fill("#api_key", "lftsk_good123");
+await page.click("button:has-text('Check and connect')");
+await page.waitForSelector("p[role=status]:has-text('Connected')");
+const liftStatus = (await page.textContent("section[aria-labelledby=status-heading]")).replace(/\s+/g, " ");
+step("liftosaur: " + liftStatus);
+if (!liftStatus.includes("Connected") || !liftStatus.includes("Workouts imported11")) throw new Error("should be connected with 11 workouts");
+await page.screenshot({ path: `${out}/12-liftosaur.png`, fullPage: true });
+await page.goto(BASE + "/settings");
+const liftRow = await page.textContent("section[aria-labelledby=liftosaur-heading]");
+if (!liftRow.includes("Connected · 11 workouts")) throw new Error("settings should show the connection: " + liftRow);
+await page.click("a:has-text('Manage')");
+await page.click("button:has-text('Disconnect Liftosaur')");
+await page.waitForSelector("p[role=status]:has-text('Disconnected')");
+step("liftosaur: disconnected -> " + (await page.textContent("section[aria-labelledby=status-heading] [class*=hint]")));
 
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();

@@ -82,4 +82,35 @@ do $$ begin
 end $$;
 reset role;
 
+-- Liftosaur connect and disconnect: service role only; disconnecting
+-- deletes the Vault secret and the integrations row.
+select public.set_liftosaur_key('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'lftsk_first');
+select public.set_liftosaur_key('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'lftsk_second');
+do $$ begin
+  assert (select count(*) from vault.secrets) = 1, 'replacing a key updates the one secret';
+  assert (select decrypted_secret from vault.decrypted_secrets) = 'lftsk_second', 'the new key is stored';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
+do $$ begin
+  assert (select status from public.integrations) = 'connected', 'the user sees their connection';
+  begin
+    perform public.disconnect_liftosaur('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+    assert false, 'clients can''t call disconnect_liftosaur directly';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.set_liftosaur_key('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'lftsk_x');
+    assert false, 'clients can''t call set_liftosaur_key directly';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+select public.disconnect_liftosaur('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+select public.disconnect_liftosaur('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); -- twice is fine
+do $$ begin
+  assert not exists (select 1 from public.integrations), 'disconnect removes the integration';
+  assert not exists (select 1 from vault.secrets), 'disconnect deletes the key from Vault';
+end $$;
+
 select 'all app support tests passed' as result;

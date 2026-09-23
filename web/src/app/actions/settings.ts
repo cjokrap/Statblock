@@ -218,7 +218,7 @@ export async function addStackItem(formData: FormData) {
     .select("id")
     .single();
   if (sup.error) throw new Error(sup.error.message);
-  const count = await supabase.from("daily_stack_items").select("id", { count: "exact", head: true });
+  const count = await supabase.from("daily_stack_items").select("id", { count: "exact" }).limit(1);
   const item = await supabase
     .from("daily_stack_items")
     .insert({ user_id: uid, supplement_id: sup.data.id, sort: count.count ?? 0 });
