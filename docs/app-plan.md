@@ -24,7 +24,7 @@ Design source: the clickable mockup (see CLAUDE.md). Its look is:
 | 5 | Today dashboard: calories as HP, macros, quests, weekly bosses, water quick-add, daily stack button (plus managing the stack in Settings), CHA quick log, weigh-in, training feed with PRs, skip buttons and "I'm recovered", undo for each tap. Streaks wait for the engine | Merged (#13) |
 | 6 | Liftosaur connect screen: Settings → Liftosaur shows status, last sync, errors and workouts imported; a pasted key is checked with Liftosaur, then saved with `set_liftosaur_key` from a server action (secret key); Disconnect deletes it from Vault (`disconnect_liftosaur`) | Merged (#14) |
 | 7 | Barcode scanning: camera (ZXing, works in iPhone Safari) or a typed number. A barcode already in foods opens that food (USDA first); otherwise Open Food Facts, saved into foods (source `off`) on first log, credited on screen | Merged (#15) |
-| 8 | Edit a logged food: change the amount or portion, or move it to another meal, from the Today food log, instead of deleting and re-logging it. Since `events` is append-only, an edit is one server-side transaction that voids the old entry and logs the new one with the same `occurred_at`, so quest timing and meal-slot XP stay honest | Planned |
+| 8 | Edit a logged food: change the amount or portion, or move it to another meal, from the Today food log, instead of deleting and re-logging it. Since `events` is append-only, an edit is one server-side transaction that voids the old entry and logs the new one with the same `occurred_at`, so quest timing and meal-slot XP stay honest (`edit_food_log`) | In progress |
 
 **Why logging comes before setup:** saving settings starts food judging
 (see `docs/rules-engine.md`). If setup shipped first, every day would count

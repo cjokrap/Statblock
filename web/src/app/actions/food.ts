@@ -43,6 +43,7 @@ export async function removeFood(formData: FormData) {
   if (error) throw new Error(error.message);
   await rescore(supabase);
   revalidatePath("/");
+  if (formData.get("then") === "home") redirect("/"); // from the edit page
 }
 
 // Log a USDA packaged food by its FDC id. The product is fetched from USDA
@@ -97,6 +98,29 @@ export async function logOffFood(formData: FormData) {
 
   const { error } = await supabase.rpc("log_food", {
     p_food_id: foodId,
+    p_grams: Math.round(grams * 100) / 100,
+    p_meal: meal,
+    p_portion_label: portion,
+  });
+  if (error) throw new Error(error.message);
+  await rescore(supabase);
+  revalidatePath("/");
+  redirect("/");
+}
+
+// Change a logged entry's amount or meal. edit_food_log voids the old entry
+// and logs the new one at the same time, in one transaction.
+export async function editFood(formData: FormData) {
+  const eventId = Number(formData.get("event_id"));
+  const grams = Number(formData.get("grams"));
+  const meal = formData.get("meal");
+  const portion = String(formData.get("portion_label") ?? "").trim() || null;
+  if (!Number.isInteger(eventId) || !(grams > 0 && grams < 100000) || !isMeal(meal)) {
+    throw new Error("Invalid edit");
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("edit_food_log", {
+    p_event_id: eventId,
     p_grams: Math.round(grams * 100) / 100,
     p_meal: meal,
     p_portion_label: portion,

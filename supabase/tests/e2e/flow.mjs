@@ -258,6 +258,29 @@ await page.goto(BASE + "/log/barcode/818290014108?meal=snack");
 await page.waitForURL(/\/log\/food\/\d+/);
 step("Chobani barcode -> saved USDA food: " + (await page.textContent("h1")));
 
+// Editing a logged food: 3 eggs become 2, moved to snacks; then remove
+// the protein bar from its edit page.
+await page.goto(BASE + "/");
+await page.click("a[aria-label^='Edit Eggs']");
+await page.waitForSelector("#qty");
+const editStart = [await page.inputValue("#qty"), await page.$eval("#unit", (s) => s.selectedOptions[0].textContent), await page.inputValue("#meal")];
+step("edit opens with: " + editStart.join(" · "));
+if (editStart.slice(0, 2).join("|") !== "3|1 large (50 g)") throw new Error("edit should start from the logged amount");
+// The eggs went to the meal that fits the time the test runs; move them to snacks.
+if (editStart[2] === "snack") throw new Error("eggs shouldn't start in snacks");
+await page.fill("#qty", "2");
+await page.selectOption("#meal", "snack");
+await page.click("button:has-text('Save changes')");
+await page.waitForSelector("section[aria-label=Character]");
+const snackText = await page.$$eval("h3", (hs) => hs.find((h) => h.textContent === "Snack")?.parentElement?.parentElement?.textContent ?? "");
+step("snacks now: " + snackText.replace(/\s+/g, " ").slice(0, 140));
+if (!snackText.includes("Eggs") || !snackText.includes("2 × 1 large")) throw new Error("the eggs should be 2 in snacks");
+await page.click("a[aria-label*='Protein Bar']");
+await page.click("button:has-text('Remove this entry')");
+await page.waitForSelector("section[aria-label=Character]");
+if (await page.$("a[aria-label*='Protein Bar']")) throw new Error("the bar should be removed");
+step("bar removed from its edit page");
+
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
 if (errors.length) process.exit(1);

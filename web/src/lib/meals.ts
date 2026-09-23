@@ -55,3 +55,23 @@ export function forGrams(food: Per100, grams: number) {
     fat: (food.fat_100g ?? 0) * f,
   };
 }
+
+// The amount picker's starting state for an entry already logged: its
+// portion label reads back as "1 container" or "3 × 1 large"; anything else
+// (or no label) is shown in grams.
+export function amountFromLabel(
+  label: string | null,
+  grams: number,
+  portions: { label: string; grams: number }[],
+): { unit: string; qty: string } {
+  if (label) {
+    const i = portions.findIndex((p) => p.label === label);
+    if (i >= 0) return { unit: String(i), qty: "1" };
+    const m = label.match(/^([\d.]+) × (.+)$/);
+    if (m) {
+      const j = portions.findIndex((p) => p.label === m[2]);
+      if (j >= 0) return { unit: String(j), qty: m[1] };
+    }
+  }
+  return { unit: "g", qty: String(Math.round(grams * 10) / 10) };
+}

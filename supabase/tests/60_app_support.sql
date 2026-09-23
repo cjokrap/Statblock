@@ -131,4 +131,40 @@ do $$ begin
 end $$;
 reset role;
 
+-- Editing a logged food: a void plus a new entry at the same time, only
+-- for the caller's own live entries.
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
+do $$
+declare old_id bigint; new_id bigint; old_at timestamptz;
+begin
+  old_id := public.log_food((select id from public.foods where source_id = 't-egg'), 100, 'lunch',
+                            now() - interval '1 hour', '2 × 1 large');
+  select occurred_at into old_at from public.events where id = old_id;
+  new_id := public.edit_food_log(old_id, 150, 'dinner', '3 × 1 large');
+  assert not exists (select 1 from public.live_events where id = old_id), 'the old entry is voided';
+  assert (select (fl.grams, fl.meal::text, fl.portion_label, e.occurred_at) = (150::numeric, 'dinner', '3 × 1 large', old_at)
+          from public.food_log fl join public.events e on e.id = fl.event_id where fl.event_id = new_id),
+         'the new entry has the new amount and meal, at the original time';
+  begin
+    perform public.edit_food_log(old_id, 50, 'lunch');
+    assert false, 'a voided entry can''t be edited again';
+  exception when raise_exception then null;
+  end;
+  begin
+    perform public.edit_food_log(new_id, 0, 'lunch');
+    assert false, 'zero grams is refused';
+  exception when raise_exception then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', false);
+do $$ begin
+  begin
+    perform public.edit_food_log((select max(id) from public.events where type = 'food'), 10, 'snack');
+    assert false, 'B can''t edit A''s entry';
+  exception when raise_exception then null;
+  end;
+end $$;
+reset role;
+
 select 'all app support tests passed' as result;
