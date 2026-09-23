@@ -124,7 +124,7 @@ export default async function LogPage({ searchParams }: Props) {
               {packaged.map((f) => (
                 <li key={f.fdcId}>
                   <Link
-                    href={`/log/branded/${f.fdcId}?meal=${meal}&q=${encodeURIComponent(q)}`}
+                    href={`/log/branded/${f.fdcId}?meal=${meal}&q=${encodeURIComponent(q)}${bp > 1 ? `&bp=${bp}` : ""}`}
                     className={styles.result}
                   >
                     <span className={styles.resultText}>

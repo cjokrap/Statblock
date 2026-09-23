@@ -16,11 +16,13 @@ type Props = {
 // foods table only when it's logged.
 export default async function BrandedFoodPage({ params, searchParams }: Props) {
   const [{ fdcId }, sp, tz] = await Promise.all([params, searchParams, userTimezone()]);
-  const food = await getBranded(Number(fdcId));
+  const q = typeof sp.q === "string" ? sp.q : "";
+  const bp = typeof sp.bp === "string" ? Number.parseInt(sp.bp, 10) || 1 : 1;
+  const food = await getBranded(Number(fdcId), { query: q, page: bp });
   if (!food) notFound();
   const meal = isMeal(sp.meal) ? sp.meal : mealForHour(localNow(tz).hour);
   const today = await todaysLog(tz);
-  const back = typeof sp.q === "string" ? `/log?meal=${meal}&q=${encodeURIComponent(sp.q)}` : `/log?meal=${meal}`;
+  const back = q ? `/log?meal=${meal}&q=${encodeURIComponent(q)}${bp > 1 ? `&bp=${bp}` : ""}` : `/log?meal=${meal}`;
 
   return (
     <main className={styles.main}>
@@ -42,7 +44,7 @@ export default async function BrandedFoodPage({ params, searchParams }: Props) {
         </div>
         <AmountForm
           action={logBrandedFood}
-          ids={{ fdc_id: food.fdcId }}
+          ids={{ fdc_id: food.fdcId, q, bp }}
           per100={{
             kcal_100g: food.kcal,
             protein_100g: food.protein,

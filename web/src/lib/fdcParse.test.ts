@@ -79,4 +79,8 @@ test("ranking puts products matching every word, brand included, first", () => {
   );
   assert.equal(matchScore(q, foods[2]), 1);
   assert.equal(matchScore("", foods[0]), 0);
+  // A "!" for an i in a styled brand, and the sub-brand
+  const corePower = { fdcId: 2278100, description: "CHOCOLATE HIGH PROTEIN MILK SHAKE", brandName: "FA!RLIFE", subbrandName: "CORE POWER" };
+  assert.equal(matchScore(q, corePower), 1);
+  assert.equal(matchScore("core power", corePower), 1);
 });

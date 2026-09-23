@@ -21,6 +21,7 @@ export type FdcFoodRaw = {
   dataType?: string;
   brandOwner?: string;
   brandName?: string;
+  subbrandName?: string;
   gtinUpc?: string;
   servingSize?: number;
   servingSizeUnit?: string;
@@ -132,10 +133,12 @@ function isoDate(s: string): string | null {
 // FDC's search matches any of the words, so "fairlife chocolate protein
 // shake" also returns every other brand's chocolate shake, often first.
 // Rank by how many of the query's words appear in the product's name or
-// brand; ties keep FDC's order. Plurals match singulars ("shakes").
+// brand; ties keep FDC's order. Plurals match singulars ("shakes"), and a
+// "!" standing in for an i in a styled brand ("FA!RLIFE") reads as one.
 function words(s: string): string[] {
   return s
     .toLowerCase()
+    .replace(/([a-z])!(?=[a-z])/g, "$1i")
     .split(/[^a-z0-9]+/)
     .filter(Boolean)
     .map((w) => (w.length > 3 && !w.endsWith("ss") ? w.replace(/s$/, "") : w));
@@ -144,7 +147,7 @@ function words(s: string): string[] {
 export function matchScore(query: string, raw: FdcFoodRaw): number {
   const q = [...new Set(words(query))];
   if (q.length === 0) return 0;
-  const have = new Set(words([raw.description, raw.brandName, raw.brandOwner].filter(Boolean).join(" ")));
+  const have = new Set(words([raw.description, raw.brandName, raw.subbrandName, raw.brandOwner].filter(Boolean).join(" ")));
   return q.filter((w) => have.has(w)).length / q.length;
 }
 

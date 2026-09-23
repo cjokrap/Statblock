@@ -59,7 +59,10 @@ export async function logBrandedFood(formData: FormData) {
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub) throw new Error("Not signed in");
 
-  const food = await getBranded(fdcId);
+  const food = await getBranded(fdcId, {
+    query: String(formData.get("q") ?? ""),
+    page: Number.parseInt(String(formData.get("bp") ?? "1"), 10) || 1,
+  });
   if (!food) throw new Error("USDA doesn't have that product any more");
   const foodId = await importBrandedFood(food);
 

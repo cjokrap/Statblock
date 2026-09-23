@@ -87,7 +87,16 @@ await page.goto(BASE + "/log?meal=lunch&q=" + encodeURIComponent("Fairlife Choco
 await page.waitForSelector("#packaged-heading");
 const shakes = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.map((e) => e.textContent));
 step(`fairlife search: ${shakes.length} result(s), first: ${shakes[0]}`);
-if (!shakes[0]?.toLowerCase().includes("fairlife")) throw new Error("the Fairlife shake should come first");
+if (!/fa[i!]rlife/i.test(shakes[0] ?? "")) throw new Error("a Fairlife shake should come first");
+// Core Power's details record is unusable; the page falls back to its search entry.
+await page.click("section[aria-labelledby=packaged-heading] li a:has-text('Milk Shake')");
+await page.waitForSelector("#qty");
+const cpOptions = await page.$$eval("#unit option", (o) => o.map((x) => x.textContent));
+step("core power portions: " + cpOptions.join(" | ") + ", " + (await page.textContent("dl div:first-child dd")) + " kcal");
+if (cpOptions[0] !== "1 bottle (414 g)") throw new Error("portion label: " + cpOptions[0]);
+await page.click("button[type=submit]");
+await page.waitForFunction(() => [...document.querySelectorAll('[class*="itemName"]')].some((e) => e.textContent.includes("Milk Shake")));
+step("core power logged");
 await page.goto(BASE + "/log?meal=lunch&q=" + encodeURIComponent("chocolate protein shake"));
 await page.waitForSelector("#packaged-heading");
 const page1 = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.length);
@@ -95,7 +104,8 @@ await page.click("text=More packaged foods");
 await page.waitForFunction(() => document.querySelector("#packaged-heading")?.textContent.includes("page 2"));
 const page2 = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.length);
 step(`paging: ${page1} on page 1, ${page2} on page 2`);
-if (page1 !== 25 || page2 !== 6) throw new Error("expected 25 + 6 packaged results");
+// 32 matches; Core Power, logged above, shows as a saved food instead.
+if (page1 !== 24 || page2 !== 7) throw new Error("expected 24 + 7 packaged results");
 if (!(await page.$("text=Previous"))) throw new Error("page 2 should link back");
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
