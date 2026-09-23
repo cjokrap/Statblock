@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseBranded, tidyName } from "./fdcParse.ts";
+import { matchScore, parseBranded, rankBranded, tidyName } from "./fdcParse.ts";
 
 test("search-result shape", () => {
   const f = parseBranded({
@@ -62,4 +62,21 @@ test("no usable serving", () => {
 test("tidyName", () => {
   assert.equal(tidyName("PEANUT BUTTER (CREAMY)"), "Peanut Butter (Creamy)");
   assert.equal(tidyName("Kind bar"), "Kind bar");
+});
+
+test("ranking puts products matching every word, brand included, first", () => {
+  const q = "Fairlife Chocolate Protein Shake";
+  const foods = [
+    { fdcId: 1, description: "CHOCOLATE PROTEIN SHAKE", brandOwner: "Premier Nutrition" },
+    { fdcId: 2, description: "ULTRA-FILTERED MILK", brandName: "FAIRLIFE" },
+    { fdcId: 3, description: "CHOCOLATE HIGH PROTEIN SHAKES", brandOwner: "fairlife, LLC" },
+    { fdcId: 4, description: "VANILLA PROTEIN SHAKE", brandName: "Fairlife" },
+    { fdcId: 5, description: "PROTEIN BAR" },
+  ];
+  assert.deepEqual(
+    rankBranded(q, foods).map((f) => f.fdcId),
+    [3, 1, 4, 2, 5],
+  );
+  assert.equal(matchScore(q, foods[2]), 1);
+  assert.equal(matchScore("", foods[0]), 0);
 });

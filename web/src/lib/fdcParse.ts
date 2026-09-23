@@ -128,3 +128,29 @@ function isoDate(s: string): string | null {
   if (us) return `${us[3]}-${us[1].padStart(2, "0")}-${us[2].padStart(2, "0")}`;
   return null;
 }
+
+// FDC's search matches any of the words, so "fairlife chocolate protein
+// shake" also returns every other brand's chocolate shake, often first.
+// Rank by how many of the query's words appear in the product's name or
+// brand; ties keep FDC's order. Plurals match singulars ("shakes").
+function words(s: string): string[] {
+  return s
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => (w.length > 3 && !w.endsWith("ss") ? w.replace(/s$/, "") : w));
+}
+
+export function matchScore(query: string, raw: FdcFoodRaw): number {
+  const q = [...new Set(words(query))];
+  if (q.length === 0) return 0;
+  const have = new Set(words([raw.description, raw.brandName, raw.brandOwner].filter(Boolean).join(" ")));
+  return q.filter((w) => have.has(w)).length / q.length;
+}
+
+export function rankBranded(query: string, foods: FdcFoodRaw[]): FdcFoodRaw[] {
+  return foods
+    .map((f, i) => ({ f, i, s: matchScore(query, f) }))
+    .sort((a, b) => b.s - a.s || a.i - b.i)
+    .map((x) => x.f);
+}

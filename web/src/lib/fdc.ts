@@ -1,5 +1,5 @@
 import "server-only";
-import { parseBranded, type BrandedFood, type FdcFoodRaw } from "@/lib/fdcParse";
+import { parseBranded, rankBranded, type BrandedFood, type FdcFoodRaw } from "@/lib/fdcParse";
 
 // USDA FoodData Central API, for packaged (Branded) foods, which aren't
 // bulk-loaded. FDC_API_BASE overrides the address in tests.
@@ -20,18 +20,24 @@ async function fdcGet(path: string, params: Record<string, string>): Promise<unk
   return res.json();
 }
 
-export async function searchBranded(query: string, limit = 15): Promise<BrandedFood[]> {
+export type BrandedPage = { foods: BrandedFood[]; page: number; totalPages: number };
+
+type SearchResponse = { foods?: FdcFoodRaw[]; totalHits?: number; totalPages?: number } | null;
+
+// One page of packaged foods, best matches first. Asks FDC for products
+// matching every word, falling back to any word when none do; then
+// rankBranded orders the page by how many words each one matches.
+export async function searchBranded(query: string, page = 1, pageSize = 25): Promise<BrandedPage> {
   const q = query.trim();
-  if (q.length < 3 || !fdcConfigured()) return [];
-  const data = (await fdcGet("/foods/search", {
-    query: q,
-    dataType: "Branded",
-    pageSize: String(limit),
-  })) as { foods?: FdcFoodRaw[] } | null;
-  return (data?.foods ?? [])
-    .filter((f) => Number.isInteger(f.fdcId))
+  const empty = { foods: [], page, totalPages: 0 };
+  if (q.length < 3 || !fdcConfigured()) return empty;
+  const params = { query: q, dataType: "Branded", pageSize: String(pageSize), pageNumber: String(page) };
+  let data = (await fdcGet("/foods/search", { ...params, requireAllWords: "true" })) as SearchResponse;
+  if (!data?.totalHits) data = (await fdcGet("/foods/search", params)) as SearchResponse;
+  const foods = rankBranded(q, (data?.foods ?? []).filter((f) => Number.isInteger(f.fdcId)))
     .map(parseBranded)
     .filter((f) => f.kcal !== null); // no energy, no scoring
+  return { foods, page, totalPages: data?.totalPages ?? 1 };
 }
 
 export async function getBranded(fdcId: number): Promise<BrandedFood | null> {

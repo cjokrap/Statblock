@@ -19,12 +19,16 @@ const SOURCE_BADGE: Record<string, string> = {
 export default async function LogPage({ searchParams }: Props) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
+  const bp = Math.max(1, Math.min(50, Number.parseInt(typeof sp.bp === "string" ? sp.bp : "1", 10) || 1));
   const meal = isMeal(sp.meal) ? sp.meal : mealForHour(localNow(await userTimezone()).hour);
-  const [results, packagedAll] = await Promise.all([
-    q ? searchFoods(q) : [],
+  const [results, packagedPage] = await Promise.all([
+    // Later pages of packaged foods skip the local results above them.
+    q && bp === 1 ? searchFoods(q) : [],
     // A USDA outage shouldn't break the rest of search.
-    q ? searchBranded(q).catch(() => null) : [],
+    q ? searchBranded(q, bp).catch(() => null) : null,
   ]);
+  const packagedAll = packagedPage?.foods ?? null;
+  const pageHref = (n: number) => `/log?meal=${meal}&q=${encodeURIComponent(q)}${n > 1 ? `&bp=${n}` : ""}#packaged-heading`;
   // Packaged foods already saved show up in the main results.
   const saved = new Set(results.filter((f) => f.source === "usda_branded").map((f) => f.source_id));
   const packaged = packagedAll?.filter((f) => !saved.has(String(f.fdcId))) ?? null;
@@ -104,7 +108,7 @@ export default async function LogPage({ searchParams }: Props) {
       {q && q.trim().length >= 3 && (
         <section aria-labelledby="packaged-heading" className={styles.packaged}>
           <h2 id="packaged-heading" className={styles.hint}>
-            Packaged foods · USDA
+            Packaged foods · USDA{bp > 1 ? ` · page ${bp}` : ""}
           </h2>
           {!fdcConfigured() ? (
             <p className={styles.empty}>
@@ -136,6 +140,12 @@ export default async function LogPage({ searchParams }: Props) {
                 </li>
               ))}
             </ul>
+          )}
+          {packagedPage && (bp > 1 || packagedPage.totalPages > bp) && (
+            <nav aria-label="Packaged food pages" className={styles.pager}>
+              {bp > 1 ? <Link href={pageHref(bp - 1)}>Previous</Link> : <span />}
+              {packagedPage.totalPages > bp && <Link href={pageHref(bp + 1)}>More packaged foods</Link>}
+            </nav>
           )}
         </section>
       )}

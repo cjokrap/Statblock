@@ -81,6 +81,22 @@ const packagedAfter = await page.$$eval("section[aria-labelledby=packaged-headin
 step(`search again: saved copy in main results (${localHit.length}), packaged duplicates: ${packagedAfter}`);
 if (localHit.length !== 1 || packagedAfter !== 0) throw new Error("saved packaged food should replace the USDA result");
 
+// Ranking: products with every word, brand included, come first. Paging:
+// more than a page of matches gets a "More packaged foods" link.
+await page.goto(BASE + "/log?meal=lunch&q=" + encodeURIComponent("Fairlife Chocolate Protein Shake"));
+await page.waitForSelector("#packaged-heading");
+const shakes = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.map((e) => e.textContent));
+step(`fairlife search: ${shakes.length} result(s), first: ${shakes[0]}`);
+if (!shakes[0]?.toLowerCase().includes("fairlife")) throw new Error("the Fairlife shake should come first");
+await page.goto(BASE + "/log?meal=lunch&q=" + encodeURIComponent("chocolate protein shake"));
+await page.waitForSelector("#packaged-heading");
+const page1 = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.length);
+await page.click("text=More packaged foods");
+await page.waitForFunction(() => document.querySelector("#packaged-heading")?.textContent.includes("page 2"));
+const page2 = await page.$$eval("section[aria-labelledby=packaged-heading] li", (els) => els.length);
+step(`paging: ${page1} on page 1, ${page2} on page 2`);
+if (page1 !== 25 || page2 !== 6) throw new Error("expected 25 + 6 packaged results");
+if (!(await page.$("text=Previous"))) throw new Error("page 2 should link back");
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
 if (errors.length) process.exit(1);

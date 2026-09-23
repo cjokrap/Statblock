@@ -112,6 +112,10 @@ two other ways instead:
   `usda_branded`, keyed on its fdc_id, the same as the bulk loader) only
   when it's logged. One user is far below the API's limit of 1,000
   requests an hour.
+  FDC matches any word of a query, so the app asks for products with
+  every word first (falling back to any word), then ranks each page by how
+  many words appear in the name or brand. Results come 25 to a page, with
+  a "More packaged foods" link.
 
 `load.sh` can still load a Branded release by hand into a database with
 several GB free.

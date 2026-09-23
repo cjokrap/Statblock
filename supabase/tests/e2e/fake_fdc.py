@@ -12,8 +12,22 @@ YOGURT = {
 }
 NUTRIENTS = [(1008, "KCAL", 53), (1003, "G", 10), (1005, "G", 4), (1004, "G", 0), (1087, "MG", 110)]
 
-def search_shape():
-    return dict(YOGURT, foodNutrients=[{"nutrientId": i, "unitName": u, "value": v} for i, u, v in NUTRIENTS])
+# For ranking and paging: FDC matches any word and doesn't favour the brand,
+# so the decoys come back before the Fairlife shake.
+SHAKES = [
+    {"fdcId": 3000000 + n, "dataType": "Branded", "description": "CHOCOLATE PROTEIN SHAKE",
+     "brandOwner": f"Other Brand {n}"} for n in range(1, 31)
+] + [
+    {"fdcId": 2900001, "dataType": "Branded", "description": "ULTRA-FILTERED MILK", "brandName": "FAIRLIFE"},
+    {"fdcId": 2900002, "dataType": "Branded", "description": "CHOCOLATE NUTRITION PLAN PROTEIN SHAKES",
+     "brandOwner": "fairlife, LLC"},
+]
+
+def search_shape(food=YOGURT):
+    return dict(food, foodNutrients=[{"nutrientId": i, "unitName": u, "value": v} for i, u, v in NUTRIENTS])
+
+def text(food):
+    return " ".join(food.get(k, "") for k in ("description", "brandName", "brandOwner")).lower()
 
 def detail_shape():
     d = {k: v for k, v in YOGURT.items() if k != "publishedDate"}
@@ -35,8 +49,15 @@ class H(BaseHTTPRequestHandler):
         if q.get("api_key") != "e2e-fdc-key":
             return self.send(403, {"error": {"code": "API_KEY_INVALID"}})
         if u.path == "/fdc/v1/foods/search":
-            hit = any(w in "greek yogurt chobani" for w in q.get("query", "").lower().split())
-            return self.send(200, {"totalHits": int(hit), "foods": [search_shape()] if hit else []})
+            words = q.get("query", "").lower().split()
+            if q.get("requireAllWords") == "true":
+                hits = [f for f in [YOGURT] + SHAKES if all(w in text(f) for w in words)]
+            else:
+                hits = [f for f in [YOGURT] + SHAKES if any(w in text(f) for w in words)]
+            size, page = int(q.get("pageSize", 50)), int(q.get("pageNumber", 1))
+            return self.send(200, {"totalHits": len(hits), "currentPage": page,
+                                   "totalPages": (len(hits) + size - 1) // size,
+                                   "foods": [search_shape(f) for f in hits[(page - 1) * size:page * size]]})
         if u.path == f"/fdc/v1/food/{YOGURT['fdcId']}":
             return self.send(200, detail_shape())
         return self.send(404, {"error": "not found"})
