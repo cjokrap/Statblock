@@ -82,7 +82,13 @@ do $$ declare s public.user_settings; begin
   assert s.effective_from = (now() at time zone 'America/Chicago')::date, 'targets start today, Chicago time';
   assert (s.calorie_target, s.protein_g, s.carbs_g, s.fat_g, s.eating_style::text, s.water_goal_ml, s.rest_days)
        = (2000, 180, 170, 67, 'custom', 2957, '{3,7}'::smallint[]), 'saved settings: ' || s::text;
-  assert (select weight_kg from public.weigh_ins) = 99.8, '220 lb logged as a weigh-in';
+  assert (select count(*) from public.weigh_ins) = 2, 'setup''s 220 lb and the dashboard''s 219 lb';
+  assert (select weight_kg from public.weigh_ins order by event_id limit 1) = 99.79, '220 lb logged as a weigh-in';
+  assert (select sum(w.ml) from public.live_events e join public.water_log w on w.event_id = e.id) = 473,
+         'water: 16 oz live after undoing 32 oz';
+  assert (select count(*) from public.live_events where type in ('stack_taken', 'self_care')) = 2, 'stack and date night';
+  assert (select completed_at is not null from public.quest_progress where quest_code = 'take_stack'),
+         'the stack quest completed';
   assert (select (sex, birth_date, height_cm, goal_weight_kg) = ('male', date '1981-01-15', 177.8, 83.9)
           from public.profiles), 'profile saved';
 end $$;

@@ -1,7 +1,8 @@
-import { loadSettings } from "@/lib/settings";
+import { loadSettings, loadStack } from "@/lib/settings";
 import { EATING_STYLES, isOneOf, macrosFor, parseNumber } from "@/lib/targets";
 import { BackLink } from "./parts";
 import { SettingsForm, type SettingsInitial } from "./SettingsForm";
+import { StackEditor } from "./StackEditor";
 import styles from "./settings.module.css";
 
 export const metadata = { title: "Settings · Statblock" };
@@ -9,7 +10,7 @@ export const metadata = { title: "Settings · Statblock" };
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function SettingsPage({ searchParams }: Props) {
-  const [sp, data] = await Promise.all([searchParams, loadSettings()]);
+  const [sp, data, stack] = await Promise.all([searchParams, loadSettings(), loadStack()]);
   const q = (k: string) => (typeof sp[k] === "string" ? parseNumber(sp[k]) : null);
   const { profile, settings, rules } = data;
 
@@ -71,6 +72,7 @@ export default async function SettingsPage({ searchParams }: Props) {
         timezones={timezones}
         saved={settings !== null}
       />
+      <StackEditor items={stack} />
     </main>
   );
 }

@@ -110,10 +110,22 @@ export async function loadSettings(): Promise<SettingsData> {
   };
 }
 
-// Whether the user has saved targets yet (first-run setup is done).
-export async function hasTargets(): Promise<boolean> {
+// The active daily stack, for Settings.
+export async function loadStack(): Promise<{ id: number; name: string; serving: string }[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("user_settings").select("id").limit(1);
+  const { data, error } = await supabase
+    .from("daily_stack_items")
+    .select("id, servings, sort, supplements (name, serving_label)")
+    .eq("active", true)
+    .order("sort");
   if (error) throw new Error(error.message);
-  return (data ?? []).length > 0;
+  return ((data ?? []) as unknown as {
+    id: number;
+    servings: number;
+    supplements: { name: string; serving_label: string } | null;
+  }[]).map((i) => ({
+    id: i.id,
+    name: i.supplements?.name ?? "Supplement",
+    serving: i.supplements?.serving_label ?? "1 serving",
+  }));
 }
