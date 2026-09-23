@@ -107,6 +107,55 @@ step(`paging: ${page1} on page 1, ${page2} on page 2`);
 // 32 matches; Core Power, logged above, shows as a saved food instead.
 if (page1 !== 24 || page2 !== 7) throw new Error("expected 24 + 7 packaged results");
 if (!(await page.$("text=Previous"))) throw new Error("page 2 should link back");
+// First-run setup: the banner on Today, suggested targets, saving them.
+await page.goto(BASE + "/");
+await page.click("text=Set your targets");
+await page.waitForSelector("#height_ft");
+await page.fill("#height_ft", "5");
+await page.fill("#height_in", "10");
+await page.fill("#weight", "220");
+await page.fill("#goal_weight", "185");
+await page.fill("#birth_date", "1981-01-15");
+await page.click("[aria-label=Sex] button:has-text('Male')");
+await page.click("[aria-label='Planned rest days'] button[aria-label=Wednesday]");
+await page.click("[aria-label='Planned rest days'] button[aria-label=Sunday]");
+const kcalShown = await page.textContent("section[aria-labelledby=suggest-heading] span[class*=kcalValue]");
+const macrosShown = await page.$$eval("section[aria-labelledby=suggest-heading] dd", (els) => els.map((e) => e.textContent));
+step(`setup suggestion: ${kcalShown} kcal, ${macrosShown.join(" / ")}`);
+if (kcalShown !== "2,430" || macrosShown.join("|") !== "148 g|277 g|81 g|100 oz") throw new Error("the mockup's example should suggest 2,430 kcal, 148/277/81 g, 100 oz");
+if (!(await page.textContent("section[aria-labelledby=suggest-heading] [role=note]")).includes("not medical advice")) throw new Error("setup needs the disclaimer");
+await page.screenshot({ path: `${out}/9-setup.png`, fullPage: true });
+await page.click("button:has-text('Use these targets')");
+await page.waitForSelector("section[aria-label=Character]");
+if (await page.$("text=Set your targets")) throw new Error("the setup banner should be gone once targets are saved");
+step("targets saved, banner gone");
+
+// Settings: shows what setup saved; edit to Charles's own numbers.
+await page.click("a:has-text('Settings')");
+await page.waitForSelector("#calorie_target");
+const shown = await Promise.all(["#calorie_target", "#protein_g", "#carbs_g", "#fat_g", "#water"].map((s) => page.inputValue(s)));
+const restShown = await page.$$eval("[aria-label='Planned rest days'] button[aria-pressed=true]", (b) => b.map((x) => x.getAttribute("aria-label")));
+step(`settings: ${shown.join(" / ")}, rest ${restShown.join(" + ")}`);
+if (shown.join("|") !== "2430|148|277|81|100" || restShown.join() !== "Wednesday,Sunday") throw new Error("settings should show the saved targets");
+await page.fill("#calorie_target", "2000");
+await page.fill("#protein_g", "180");
+await page.fill("#carbs_g", "170");
+await page.fill("#fat_g", "67");
+const styleNow = await page.textContent("[aria-label='Eating style'] button[aria-pressed=true]");
+const sumLine = await page.textContent("span[class*=good], span[class*=warn]");
+step(`edited macros: style now ${styleNow}; ${sumLine}`);
+if (styleNow !== "Custom" || !sumLine.includes("matches")) throw new Error("editing macros should switch to Custom and match 2,000 kcal");
+if (!(await page.textContent("[role=note]")).includes("not medical advice")) throw new Error("settings needs the disclaimer");
+await page.screenshot({ path: `${out}/10-settings.png`, fullPage: true });
+await page.click("button:has-text('Save changes')");
+await page.waitForSelector("p[role=status]");
+step("settings: " + (await page.textContent("p[role=status]")) + " calories now " + (await page.inputValue("#calorie_target")));
+if ((await page.inputValue("#calorie_target")) !== "2000") throw new Error("saved calories should be 2000");
+
+// The web app manifest loads without a session (phones fetch it that way).
+const manifest = await (await fetch(BASE + "/manifest.webmanifest")).json();
+step(`manifest: ${manifest.name}, ${manifest.display}, ${manifest.icons.length} icons`);
+if (manifest.display !== "standalone") throw new Error("manifest should open full screen");
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
 if (errors.length) process.exit(1);

@@ -149,9 +149,9 @@ stand-in for Supabase and headless Chromium:
 3. **Rules engine:** built (`game` schema, `docs/rules-engine.md`). The
    Liftosaur sync workflow rescores the last 21 days every 2 hours, and the
    **Replay game** workflow rebuilds everything after a rules change. Food
-   judging starts with Charles's first `user_settings` row, so don't insert
-   one until he can log food in the app, or every day will count as
-   unlogged. Not yet built: loot drops, achievements, streaks.
+   judging starts with Charles's first `user_settings` row, which the app's
+   first-run setup (`/setup`) or Settings writes; don't insert one by hand.
+   Not yet built: loot drops, achievements, streaks.
 4. **Next.js app (in progress):** lives in `web/` (Next.js 16: middleware is
    now `proxy.ts`, and request APIs are async only; read
    `web/node_modules/next/dist/docs/` before framework-level changes). It's
@@ -173,6 +173,4 @@ stand-in for Supabase and headless Chromium:
 
 ## Open review items (docs/schema.md)
 
-- Settings edits are gated on `current_date` in UTC. Consider using the
-  profile time zone instead.
 - DRI values need a spot-check before a public launch.

@@ -20,10 +20,11 @@ Design source: the clickable mockup (see CLAUDE.md). Its look is:
 | 1 | Scaffold: Next.js + TypeScript in `web/`, Supabase auth (email + password sign-in), theme tokens, read-only character sheet (level, XP, ability scores, classes, jobs), Web CI workflow | Merged (#7) |
 | 2 | Food logging: search (`search_foods`), portions, `log_food`, food log by meal on Today, recents, remove (void). Adds `public.rescore_me()` so XP updates right after a log. e2e browser test in `supabase/tests/e2e/`. Readable setup-error page | Merged (#8) |
 | 3 | Packaged foods: live USDA FoodData Central search under whole-food results, product page, and save-on-first-log into `foods` (server-side, secret key). Moved up because branded foods were the first gap in daily use | Merged (#9) |
-| 4 | First-run setup + Settings: suggested targets (Mifflin-St Jeor, rules in `targets.*`), writes `profiles` + `user_settings`, medical disclaimer on every target screen. Fix the `user_settings` edit policy to use the profile time zone (it uses UTC `current_date`). Home-screen icon + full-screen launch (web app manifest) | Planned |
+| 4 | First-run setup + Settings: suggested targets (Mifflin-St Jeor, rules in `targets.*`), writes `profiles` + `user_settings`, medical disclaimer on every target screen. Fix the `user_settings` edit policy to use the profile time zone (it uses UTC `current_date`). Home-screen icon + full-screen launch (web app manifest) | In progress |
 | 5 | Today dashboard: calories as HP, macros, quests, weekly boss, water quick-add, daily stack button, CHA quick log, weigh-in, training feed, skip buttons | Planned |
 | 6 | Liftosaur connect screen (validate key, `set_liftosaur_key` via a server action with the service role key) | Planned |
 | 7 | Barcode scanning with Open Food Facts (camera) | Planned |
+| 8 | Edit a logged food: change the amount or portion, or move it to another meal, from the Today food log, instead of deleting and re-logging it. Since `events` is append-only, an edit is one server-side transaction that voids the old entry and logs the new one with the same `occurred_at`, so quest timing and meal-slot XP stay honest | Planned |
 
 **Why logging comes before setup:** saving settings starts food judging
 (see `docs/rules-engine.md`). If setup shipped first, every day would count
@@ -40,7 +41,7 @@ Supabase:
 
 It also runs a fake USDA FoodData Central (`fake_fdc.py`). It then drives
 the app in headless Chromium: sign in, search, log, re-log, remove, and log
-a packaged food. Screenshots are saved to its work directory. Extend `flow.mjs` with
+a packaged food, then run first-run setup and Settings and check what they saved in the database. Screenshots are saved to its work directory. Extend `flow.mjs` with
 each app PR.
 
 ## Decisions
