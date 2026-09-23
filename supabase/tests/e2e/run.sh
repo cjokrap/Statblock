@@ -98,6 +98,18 @@ do $$ declare s public.user_settings; begin
           where f.source = 'off') = 7, 'energy, macros, fiber, sodium and calcium';
   assert (select grams from public.food_log l join public.foods f on f.id = l.food_id where f.source = 'off') = 55,
          'one bar logged';
+  assert not exists (select 1 from public.live_events e join public.food_log l on l.event_id = e.id
+                     join public.foods f on f.id = l.food_id where f.source = 'off'), 'the bar was removed';
+  assert (select (l.grams, l.meal::text, l.portion_label) = (100.6::numeric, 'snack', '2 × 1 large')
+          from public.live_events e join public.food_log l on l.event_id = e.id join public.foods f on f.id = l.food_id
+          where f.name like 'Eggs%'), 'eggs edited to 2 in snacks';
+  assert exists (select 1 from public.live_events e join public.food_log l on l.event_id = e.id
+                 join public.foods f on f.id = l.food_id
+                 join public.events old on old.occurred_at = e.occurred_at and old.id <> e.id
+                 join public.food_log ol on ol.event_id = old.id and ol.meal <> 'snack'
+                 where f.name like 'Eggs%'
+                   and not exists (select 1 from public.live_events x where x.id = old.id)),
+         'the edit kept the original time';
   assert (select (sex, birth_date, height_cm, goal_weight_kg) = ('male', date '1981-01-15', 177.8, 83.9)
           from public.profiles), 'profile saved';
 end $$;

@@ -107,3 +107,37 @@ export async function recentFoods(max = 6): Promise<LoggedItem[]> {
   }
   return out;
 }
+
+// One live food entry of the user's, with its food's portions, for editing.
+export async function getEntry(
+  eventId: number,
+): Promise<{ item: LoggedItem; portions: Portion[]; localDate: string } | null> {
+  const supabase = await createClient();
+  const { data: ev, error } = await supabase
+    .from("live_events")
+    .select("id, local_date")
+    .eq("id", eventId)
+    .eq("type", "food")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!ev) return null;
+  const { data: log, error: logError } = await supabase
+    .from("food_log")
+    .select(`event_id, grams, meal, portion_label, foods (${FOOD_COLUMNS})`)
+    .eq("event_id", eventId)
+    .single();
+  if (logError) throw new Error(logError.message);
+  const food = log.foods as unknown as FoodRow;
+  const found = await getFood(food.id);
+  return {
+    item: {
+      eventId,
+      meal: log.meal as Meal,
+      grams: Number(log.grams),
+      portionLabel: log.portion_label as string | null,
+      food,
+    },
+    portions: found?.portions ?? [],
+    localDate: ev.local_date as string,
+  };
+}

@@ -67,9 +67,10 @@ export function FoodLog({ items, recents, suggestedMeal }: {
               </div>
               {mealItems.map((it) => (
                 <div key={it.eventId} className={styles.item}>
-                  <span className={styles.itemName}>
+                  <Link href={`/log/entry/${it.eventId}`} className={styles.itemName}
+                    aria-label={`Edit ${it.food.name}, ${amount(it)}`}>
                     {it.food.name} · {amount(it)}
-                  </span>
+                  </Link>
                   <span className={styles.itemKcal}>{Math.round(forGrams(it.food, it.grams).kcal)}</span>
                   <form action={removeFood}>
                     <input type="hidden" name="event_id" value={it.eventId} />

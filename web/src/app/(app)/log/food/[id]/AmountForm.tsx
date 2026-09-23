@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Portion } from "@/lib/food";
-import { forGrams, MEAL_LABEL, type Meal, type Per100 } from "@/lib/meals";
+import { forGrams, MEAL_LABEL, MEALS, type Meal, type Per100 } from "@/lib/meals";
 import styles from "./food.module.css";
 
 type Props = {
@@ -14,12 +14,16 @@ type Props = {
   portions: Portion[];
   meal: Meal;
   firstInSlot: boolean;
+  // Editing a logged entry: start from its amount, let the meal change, and
+  // label the button "Save changes".
+  edit?: { unit: string; qty: string };
 };
 
-export function AmountForm({ action, ids, per100, portions, meal, firstInSlot }: Props) {
+export function AmountForm({ action, ids, per100, portions, meal, firstInSlot, edit }: Props) {
   // unit: "g" or the index of a household portion
-  const [unit, setUnit] = useState<string>(portions.length ? "0" : "g");
-  const [qty, setQty] = useState<string>(portions.length ? "1" : "100");
+  const [unit, setUnit] = useState<string>(edit?.unit ?? (portions.length ? "0" : "g"));
+  const [qty, setQty] = useState<string>(edit?.qty ?? (portions.length ? "1" : "100"));
+  const [mealNow, setMealNow] = useState<Meal>(meal);
   const [pending, setPending] = useState(false);
 
   const n = Number(qty.replace(",", "."));
@@ -34,7 +38,7 @@ export function AmountForm({ action, ids, per100, portions, meal, firstInSlot }:
       {Object.entries(ids).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <input type="hidden" name="meal" value={meal} />
+      <input type="hidden" name="meal" value={mealNow} />
       <input type="hidden" name="grams" value={grams} />
       <input type="hidden" name="portion_label" value={label} />
 
@@ -93,8 +97,29 @@ export function AmountForm({ action, ids, per100, portions, meal, firstInSlot }:
       </dl>
       {portion && valid && <p className={styles.grams}>{Math.round(grams)} g total</p>}
 
+      {edit && (
+        <div className={styles.amountRow}>
+          <label htmlFor="meal" className={styles.amountLabel}>
+            Meal
+          </label>
+          <select id="meal" value={mealNow} onChange={(e) => setMealNow(e.target.value as Meal)} className={styles.unit}>
+            {MEALS.map((m) => (
+              <option key={m} value={m}>
+                {MEAL_LABEL[m]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <button type="submit" className={styles.submit} disabled={!valid || pending}>
-        {pending ? "Adding…" : `Add to ${MEAL_LABEL[meal]}${firstInSlot ? " · +5 Quartermaster XP" : ""}`}
+        {edit
+          ? pending
+            ? "Saving…"
+            : "Save changes"
+          : pending
+            ? "Adding…"
+            : `Add to ${MEAL_LABEL[meal]}${firstInSlot ? " · +5 Quartermaster XP" : ""}`}
       </button>
     </form>
   );

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { forGrams, isMeal, localNow, mealForHour } from "./meals.ts";
+import { amountFromLabel, forGrams, isMeal, localNow, mealForHour } from "./meals.ts";
 
 test("meal from hour", () => {
   assert.equal(mealForHour(7), "breakfast");
@@ -28,4 +28,13 @@ test("nutrition scales from per 100 g", () => {
   assert.equal(n.kcal, 304);
   assert.equal(n.protein, 42);
   assert.equal(n.fat, 0);
+});
+
+test("amount picker from a logged entry", () => {
+  const portions = [{ label: "1 large", grams: 50 }, { label: "1 cup", grams: 243 }];
+  assert.deepEqual(amountFromLabel("1 large", 50, portions), { unit: "0", qty: "1" });
+  assert.deepEqual(amountFromLabel("3 × 1 large", 150, portions), { unit: "0", qty: "3" });
+  assert.deepEqual(amountFromLabel("1.5 × 1 cup", 364.5, portions), { unit: "1", qty: "1.5" });
+  assert.deepEqual(amountFromLabel(null, 212.34, portions), { unit: "g", qty: "212.3" });
+  assert.deepEqual(amountFromLabel("2 slices", 60, portions), { unit: "g", qty: "60" });
 });

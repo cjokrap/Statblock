@@ -145,3 +145,12 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+/* Each entry opens its edit page. */
+a.itemName {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--ink);
+  text-decoration: none;
+}
