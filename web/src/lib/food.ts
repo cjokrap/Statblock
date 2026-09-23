@@ -12,6 +12,7 @@ export type FoodRow = {
   protein_100g: number | null;
   carbs_100g: number | null;
   fat_100g: number | null;
+  fiber_100g: number | null;
 };
 
 export type Portion = { label: string; grams: number };
@@ -24,7 +25,7 @@ export type LoggedItem = {
   food: FoodRow;
 };
 
-const FOOD_COLUMNS = "id, source, source_id, name, brand, kcal_100g, protein_100g, carbs_100g, fat_100g";
+const FOOD_COLUMNS = "id, source, source_id, name, brand, kcal_100g, protein_100g, carbs_100g, fat_100g, fiber_100g";
 
 export async function userTimezone(): Promise<string> {
   const supabase = await createClient();

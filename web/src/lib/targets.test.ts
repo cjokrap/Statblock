@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   ageOn,
+  fiberSuggestion,
   CM_PER_IN,
   KG_PER_LB,
   macroKcal,
@@ -76,4 +77,9 @@ test("age and number parsing", () => {
   assert.equal(parseNumber(" 5.5 "), 5.5);
   assert.equal(parseNumber(""), null);
   assert.equal(parseNumber("abc"), null);
+});
+
+test("fiber suggestion", () => {
+  assert.equal(fiberSuggestion(2000), 28);
+  assert.equal(fiberSuggestion(2430), 34);
 });

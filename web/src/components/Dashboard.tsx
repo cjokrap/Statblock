@@ -41,9 +41,11 @@ function Check() {
 export function HitPoints({
   totals,
   targets,
+  stackFiber,
 }: {
-  totals: { kcal: number; protein: number; carbs: number; fat: number };
+  totals: { kcal: number; protein: number; carbs: number; fat: number; fiber: number };
   targets: NonNullable<Today["targets"]>;
+  stackFiber: number; // fiber from the daily stack taken today
 }) {
   const hp = hitPoints(totals.kcal, targets.calorie_target, targets.calorie_window_pct);
   const macros = [
@@ -55,6 +57,16 @@ export function HitPoints({
       color: "var(--teal)",
     },
     { name: "Fat", value: totals.fat, target: targets.fat_g, color: "#9A6B12" },
+    {
+      name: "Fiber",
+      value: totals.fiber + stackFiber,
+      target: targets.fiber_g,
+      color: "var(--green)",
+      note:
+        stackFiber > 0
+          ? `${fmt(totals.fiber)} g from food + ${fmt(stackFiber)} g from supplements`
+          : undefined,
+    },
   ];
   return (
     <section className={styles.card} aria-labelledby="hp-heading">
@@ -97,6 +109,7 @@ export function HitPoints({
                 {fmt(m.value)} / {fmt(m.target)} g
               </span>
             </div>
+            {"note" in m && m.note && <span className={styles.sub}>{m.note}</span>}
             <div className={styles.bar} role="presentation">
               <div
                 className={styles.barFill}

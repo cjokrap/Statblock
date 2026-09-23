@@ -147,6 +147,7 @@ step(`edited macros: style now ${styleNow}; ${sumLine}`);
 if (styleNow !== "Custom" || !sumLine.includes("matches")) throw new Error("editing macros should switch to Custom and match 2,000 kcal");
 if (!(await page.textContent("[role=note]")).includes("not medical advice")) throw new Error("settings needs the disclaimer");
 await page.screenshot({ path: `${out}/10-settings.png`, fullPage: true });
+await page.fill("#fiber_g", "35");
 await page.click("button:has-text('Save changes')");
 await page.waitForSelector("p[role=status]");
 step("settings: " + (await page.textContent("p[role=status]")) + " calories now " + (await page.inputValue("#calorie_target")));
@@ -162,7 +163,12 @@ await page.fill("#stack-name", "Multivitamin");
 await page.fill("#stack-serving", "1 tablet");
 await page.click("button:has-text('+ Add to stack')");
 await page.waitForSelector("button[aria-label='Remove Multivitamin']");
-step("stack: Multivitamin added");
+await page.fill("#stack-name", "Fiber supplement");
+await page.fill("#stack-serving", "1 scoop");
+await page.fill("#stack-fiber", "6");
+await page.click("button:has-text('+ Add to stack')");
+await page.waitForSelector("button[aria-label='Remove Fiber supplement']");
+step("stack: Multivitamin and Fiber supplement (6 g fiber) added");
 
 // The dashboard.
 await page.goto(BASE + "/");
@@ -177,6 +183,10 @@ await page.click("button:has-text('Take stack')");
 await page.waitForSelector("text=Taken at");
 await page.waitForFunction(() => [...document.querySelectorAll("section[aria-labelledby=quests-heading] li")].some((e) => e.textContent.includes("Take the daily stack") && e.textContent.includes("(done)")));
 step("stack taken, quest done");
+const fiberRow = await page.$$eval("section[aria-labelledby=hp-heading] [class*=macro]", (els) =>
+  els.map((e) => e.textContent).find((t) => t.startsWith("Fiber")) ?? "");
+step("fiber: " + fiberRow);
+if (!/^Fiber\d+ \/ 35 g/.test(fiberRow) || !fiberRow.includes("+ 6 g from supplements")) throw new Error("fiber should count the stack against a 35 g goal");
 
 const waterValue = () => page.textContent("section[aria-labelledby=water-heading] [class*=bigValue]");
 await page.click("button:has-text('+16 oz')");

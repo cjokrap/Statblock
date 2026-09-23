@@ -17,9 +17,15 @@ export default async function TodayPage() {
   const totals = items.reduce(
     (sum, it) => {
       const n = forGrams(it.food, it.grams);
-      return { kcal: sum.kcal + n.kcal, protein: sum.protein + n.protein, carbs: sum.carbs + n.carbs, fat: sum.fat + n.fat };
+      return {
+        kcal: sum.kcal + n.kcal,
+        protein: sum.protein + n.protein,
+        carbs: sum.carbs + n.carbs,
+        fat: sum.fat + n.fat,
+        fiber: sum.fiber + n.fiber,
+      };
     },
-    { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+    { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
   );
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -51,7 +57,7 @@ export default async function TodayPage() {
       )}
       <CharacterSheet c={c} />
       <AbilityScores c={c} />
-      {t.targets && <HitPoints totals={totals} targets={t.targets} />}
+      {t.targets && <HitPoints totals={totals} targets={t.targets} stackFiber={t.stack.fiberG} />}
       {t.targets && <Quests today={t} />}
       <FoodLog items={items} recents={recents} suggestedMeal={mealForHour(localNow(c.timezone).hour)} />
       <Stack today={t} />
