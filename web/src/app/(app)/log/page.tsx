@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { fdcConfigured, searchBranded } from "@/lib/fdc";
-import { searchFoods, userTimezone } from "@/lib/food";
-import { isMeal, localNow, MEAL_LABEL, MEALS, mealForHour } from "@/lib/meals";
+import { logFood } from "@/app/actions/food";
+import { SubmitButton } from "@/components/SubmitButton";
+import { recentWeek, searchFoods, userTimezone } from "@/lib/food";
+import { forGrams, isMeal, localNow, MEAL_LABEL, MEALS, mealForHour } from "@/lib/meals";
 import styles from "./log.module.css";
 
 export const metadata = { title: "Add food · Statblock" };
@@ -21,7 +23,11 @@ export default async function LogPage({ searchParams }: Props) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
   const bp = Math.max(1, Math.min(50, Number.parseInt(typeof sp.bp === "string" ? sp.bp : "1", 10) || 1));
-  const meal = isMeal(sp.meal) ? sp.meal : mealForHour(localNow(await userTimezone()).hour);
+  const tz = await userTimezone();
+  const meal = isMeal(sp.meal) ? sp.meal : mealForHour(localNow(tz).hour);
+  const tab = sp.tab === "recent" ? "recent" : "search";
+  const added = typeof sp.added === "string" ? sp.added : null;
+  if (tab === "recent") return <Recent meal={meal} tz={tz} added={added} />;
   const [results, packagedPage] = await Promise.all([
     // Later pages of packaged foods skip the local results above them.
     q && bp === 1 ? searchFoods(q) : [],
@@ -58,6 +64,8 @@ export default async function LogPage({ searchParams }: Props) {
           </Link>
         ))}
       </nav>
+
+      <Tabs meal={meal} tab="search" />
 
       <form action="/log" method="get" role="search" className={styles.search}>
         <input type="hidden" name="meal" value={meal} />
@@ -159,6 +167,92 @@ export default async function LogPage({ searchParams }: Props) {
             </nav>
           )}
         </section>
+      )}
+    </main>
+  );
+}
+
+function Tabs({ meal, tab }: { meal: string; tab: "search" | "recent" }) {
+  return (
+    <nav aria-label="Find food" className={styles.tabs}>
+      <Link href={`/log?meal=${meal}`} aria-current={tab === "search" ? "page" : undefined}
+        className={tab === "search" ? styles.tabOn : styles.tab}>
+        Search
+      </Link>
+      <Link href={`/log?meal=${meal}&tab=recent`} aria-current={tab === "recent" ? "page" : undefined}
+        className={tab === "recent" ? styles.tabOn : styles.tab}>
+        Recent · 7 days
+      </Link>
+    </nav>
+  );
+}
+
+const DAY = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
+
+// Everything logged in the last 7 days, one tap to add to the chosen meal.
+async function Recent({ meal, tz, added }: { meal: (typeof MEALS)[number]; tz: string; added: string | null }) {
+  const items = await recentWeek(tz);
+  const today = localNow(tz).date;
+  return (
+    <main className={styles.main}>
+      <header className={styles.topbar}>
+        <Link href="/" aria-label="Back to today" className={styles.back}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </Link>
+        <h1 className={styles.title}>Add to {MEAL_LABEL[meal]}</h1>
+      </header>
+      <nav aria-label="Meal" className={styles.meals}>
+        {MEALS.map((m) => (
+          <Link key={m} href={`/log?meal=${m}&tab=recent`} aria-current={m === meal ? "true" : undefined}
+            className={m === meal ? styles.mealOn : styles.meal}>
+            {MEAL_LABEL[m]}
+          </Link>
+        ))}
+      </nav>
+      <Tabs meal={meal} tab="recent" />
+      {added && (
+        <p role="status" className={styles.added}>
+          Added {added} to {MEAL_LABEL[meal].toLowerCase()}.{" "}
+          <Link href="/">Done</Link>
+        </p>
+      )}
+      {items.length === 0 ? (
+        <p className={styles.empty}>Nothing logged in the last 7 days yet. Search or scan to log something.</p>
+      ) : (
+        <ul className={styles.results}>
+          {items.map((it) => {
+            const amount = it.portionLabel ?? `${Math.round(it.grams)} g`;
+            const kcal = Math.round(forGrams(it.food, it.grams).kcal);
+            const when = it.localDate === today ? "Today" : it.localDate ? DAY.format(new Date(it.localDate + "T12:00:00Z")) : "";
+            const short = it.food.name.split(",")[0];
+            return (
+              <li key={`${it.food.id}:${it.grams}:${it.portionLabel ?? ""}`} className={styles.recentRow}>
+                <Link href={`/log/food/${it.food.id}?meal=${meal}`} className={styles.recentText}
+                  aria-label={`${it.food.name}, ${amount}: choose a different amount`}>
+                  <span className={styles.resultName}>{it.food.name}</span>
+                  <span className={styles.resultMeta}>
+                    {amount} · {kcal} kcal · last {when}
+                    {it.times > 1 ? ` · ${it.times}× this week` : ""}
+                  </span>
+                </Link>
+                <form action={logFood}>
+                  <input type="hidden" name="food_id" value={it.food.id} />
+                  <input type="hidden" name="grams" value={it.grams} />
+                  <input type="hidden" name="meal" value={meal} />
+                  <input type="hidden" name="portion_label" value={it.portionLabel ?? ""} />
+                  <input type="hidden" name="back"
+                    value={`/log?meal=${meal}&tab=recent&added=${encodeURIComponent(`${short}, ${amount}`)}`} />
+                  <SubmitButton className={styles.addButton} aria-label={`Add ${it.food.name}, ${amount}`} pendingText="…">
+                    + Add
+                  </SubmitButton>
+                </form>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </main>
   );

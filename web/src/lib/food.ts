@@ -19,6 +19,7 @@ export type Portion = { label: string; grams: number };
 
 export type LoggedItem = {
   eventId: number;
+  localDate?: string; // the day it was logged for
   meal: Meal;
   grams: number;
   portionLabel: string | null;
@@ -58,18 +59,20 @@ export async function getFood(id: number): Promise<{ food: FoodRow; portions: Po
 }
 
 // Live (not voided) food logs, newest first, joined to their foods.
-async function loggedItems(filter: { date?: string; limit?: number }): Promise<LoggedItem[]> {
+async function loggedItems(filter: { date?: string; since?: string; limit?: number }): Promise<LoggedItem[]> {
   const supabase = await createClient();
   let q = supabase
     .from("live_events")
-    .select("id, occurred_at")
+    .select("id, occurred_at, local_date")
     .eq("type", "food")
     .order("occurred_at", { ascending: false });
   if (filter.date) q = q.eq("local_date", filter.date);
+  if (filter.since) q = q.gte("local_date", filter.since);
   if (filter.limit) q = q.limit(filter.limit);
   const { data: events, error } = await q;
   if (error) throw new Error(error.message);
   const ids = (events ?? []).map((e) => e.id as number);
+  const dates = new Map((events ?? []).map((e) => [e.id as number, e.local_date as string]));
   if (ids.length === 0) return [];
 
   const { data: logs, error: logError } = await supabase
@@ -83,6 +86,7 @@ async function loggedItems(filter: { date?: string; limit?: number }): Promise<L
     .filter((l) => l !== undefined)
     .map((l) => ({
       eventId: l.event_id as number,
+      localDate: dates.get(l.event_id as number),
       meal: l.meal as Meal,
       grams: Number(l.grams),
       portionLabel: l.portion_label as string | null,
@@ -141,4 +145,20 @@ export async function getEntry(
     portions: found?.portions ?? [],
     localDate: ev.local_date as string,
   };
+}
+
+// Everything logged in the last 7 days (today included), newest first, once
+// per food and amount: meal prep repeats, so these are one tap to log again.
+export async function recentWeek(timezone: string): Promise<(LoggedItem & { times: number })[]> {
+  const today = localNow(timezone).date;
+  const since = new Date(Date.parse(today + "T00:00:00Z") - 6 * 86_400_000).toISOString().slice(0, 10);
+  const items = await loggedItems({ since });
+  const byKey = new Map<string, LoggedItem & { times: number }>();
+  for (const it of items) {
+    const key = `${it.food.id}:${it.grams}:${it.portionLabel ?? ""}`;
+    const seen = byKey.get(key);
+    if (seen) seen.times++;
+    else byKey.set(key, { ...it, times: 1 });
+  }
+  return [...byKey.values()];
 }

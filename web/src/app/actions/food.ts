@@ -32,6 +32,9 @@ export async function logFood(formData: FormData) {
   if (error) throw new Error(error.message);
   await rescore(supabase);
   revalidatePath("/");
+  // The Recent tab logs several in a row, so it comes back to itself.
+  const back = String(formData.get("back") ?? "");
+  if (back.startsWith("/log?")) redirect(back);
   if (formData.get("stay") !== "1") redirect("/");
 }
 

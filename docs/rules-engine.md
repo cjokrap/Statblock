@@ -64,27 +64,45 @@ it happened.
 
 ## Ability scores
 
-Each score is baseline 10 + good points − bad points, rounded and clamped
-to 3–20. The window is the 14 days ending on the snapshot day.
+Since rules v2 (migration `20261001000100_stat_progression.sql`), scores are
+earned over weeks. Each stat keeps a running **progress** total in good days
+(a perfect week is 7), stored in `stat_snapshots.progress`, and the score is
+where that total sits on a ladder (`stats.progression`):
 
-- **Judged days** are finished days on or after judging starts. Today is
-  never judged, because the calorie window is judged at end of day.
-- **The n denominator** is the number of judged days in the window. A
-  "points at 100%" rule pays points × (qualifying days / n). Unlogged
-  days count in n, so skipping a log never scores better than logging a
-  bad day.
-
-| Stat | Good | Bad |
+| Score | Progress needed | Perfect weeks from 10 |
 | --- | --- | --- |
-| STR | 4 × min(1, sessions ÷ planned), where planned = judged days × `training_days_per_week`/7 − injury/sick skips; plus 1 per PR (exercise per session) in the window, max 3 | 1 per planned session missed in each finished Mon–Sun week that ends in the window |
-| DEX | 6 × days in the calorie window ÷ n | 1 per fully logged day over the window |
-| CON | 6 × days in the calorie window ÷ n | 1 per fully logged day under the window |
-| INT | 8 × days whose micronutrients averaged ≥ 80% of target ÷ n | 0.5 per day averaging < 50% |
-| WIS | 8 × fully logged days (3+ meal slots) ÷ n | 2 per unlogged day |
-| CHA | 0.5 × self-care weight (date night 3, friends/D&D 2, hobby 1), max 6; plus 0.5 per weigh-in day, max 2 | 0.5 per day beyond 7 since the last self-care log or weigh-in |
+| 11 | 14 | 2 |
+| 12 | 35 | 5 |
+| 13 | 63 | 9 |
+| 20 | 455 | 65 |
 
-**STR freezes** during an injury or sick `recovery_periods` entry. It keeps
-the value from the day before the period began, and `str_frozen` is set.
+Each step costs one week more than the last (10 -> 11 is 2 weeks, 11 -> 12
+is 3, ... 19 -> 20 is 11). Below 10 the ladder mirrors: 9 at -14, 8 at -35,
+down to 3 at -245. Progress is clamped to 3-20, so nothing banks past 20 and
+a long break never digs deeper than 3. Every day adds or removes progress
+(`progress` in each `stats.*` rule):
+
+| Stat | Good day | Bad day |
+| --- | --- | --- |
+| WIS | fully logged (3+ meal slots): +1 | unlogged: -2 |
+| DEX | fully logged and in the calorie window: +1 | fully logged and over it: -1 |
+| CON | fully logged and in the window: +1 | fully logged and under it: -1 |
+| INT | micros averaged 80%+ of target: +1 | under 50%: -0.5 |
+| STR | each session: +7 / planned sessions per week (a full week is 7); each PR +1, up to 3 a week | on Sunday, each planned session missed (minus injury/sick skips): -half a session |
+| CHA | self-care weight x 0.875 (up to 5.25 a week); weigh-in days x 0.875 (up to 1.75) | each day past 7 without either: -0.5 |
+
+Day-judged changes (WIS, DEX, CON, INT, the CHA gap, the STR shortfall) land
+when the day is over, from judging start. Event-based gains (sessions, PRs,
+self-care, weigh-ins) count the day they happen. A logged bad day nets 0
+(WIS +1, DEX or CON -1); an unlogged day costs 2, so skipping a log is always
+worse than logging a bad day.
+
+**STR freezes** during an injury or sick `recovery_periods` entry: its
+progress doesn't move, up or down.
+
+`game.write_stats` carries progress forward from the day before the
+recomputed range, or rebuilds from the game's start when there's no v2
+snapshot to start from.
 
 **INT** uses only nutrients the day's food has data for. Each nutrient
 counts up to 100% of its target, then the day's score is the average
@@ -96,10 +114,12 @@ back to the DRI for the profile's sex and age. Supplements never count.
 These are the places where the design doc and `rules_config` leave a
 choice. Change them in code (and here) if they don't match intent.
 
-1. **Judging starts with the first `user_settings` row** (first-run setup).
-   Before that, nothing is day-judged: no unlogged-day penalties and no
-   daily quests. Liftosaur history from before then still earns workout XP
-   and PR points, and CHA's positive points count from the first event.
+1. **The game starts when the user starts playing** (`game.game_starts`):
+   the first day they log something in the app (`source = 'app'`) or save
+   targets. XP and scores count from then; imported history from before
+   (Liftosaur) earns nothing, but still sets the PR baselines. **Judging**
+   (unlogged-day penalties, daily quests) starts with the first
+   `user_settings` row.
 2. **Calories, carbs and micronutrients are judged only on fully logged
    days.** A day with just breakfast isn't "under the window". It already
    pays in WIS for not being fully logged.

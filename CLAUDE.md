@@ -50,7 +50,10 @@ steps are in `docs/database.md`.
 - **Jobs (food and habits):** Quartermaster (logging), Alchemist (protein,
   water, the daily supplement stack, carb ceilings), Cook and Provisioner
   (recipes and meal prep, later).
-- **Ability scores:** 3 to 20, baseline 10, rolling 14-day window.
+- **Ability scores:** 3 to 20, baseline 10, earned over weeks (rules v2): a
+  perfect week is 7 good days of progress, 10 -> 11 takes 2 perfect weeks
+  and each step one week more (65 weeks to 20). Bad days cost progress.
+  Details in `docs/rules-engine.md`.
   - STR: PRs and completed sessions, judged per week. Injury and sick skips
     freeze it.
   - DEX: penalized for going over the calorie window.
@@ -151,6 +154,8 @@ stand-in for Supabase and headless Chromium:
    **Replay game** workflow rebuilds everything after a rules change. Food
    judging starts with Charles's first `user_settings` row, which the app's
    first-run setup (`/setup`) or Settings writes; don't insert one by hand.
+   XP and scores count from the game's start (first app log or settings);
+   Liftosaur history from before earns nothing.
    Not yet built: loot drops, achievements, streaks.
 4. **Next.js app (in progress):** lives in `web/` (Next.js 16: middleware is
    now `proxy.ts`, and request APIs are async only; read
