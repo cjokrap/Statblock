@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { levelProgress, modifier, trend } from "./game.ts";
+import { levelProgress, modifier, progressForScore, progressTrend, scoreProgress, trend } from "./game.ts";
 
 // rules v1 levels.thresholds
 const T = [0, 30, 90, 270, 650, 1400, 2300, 3400, 4800, 6400, 8500, 10000, 12000, 14000, 16500, 19500, 22500, 26500, 30500, 35500];
@@ -43,4 +43,25 @@ test("trend", () => {
   assert.equal(trend(9, 10), "Down");
   assert.equal(trend(10, 10), "Steady");
   assert.equal(trend(10, undefined), "Steady");
+});
+
+const LADDER = { baseline: 10, min: 3, max: 20, days_per_week: 7, first_step_weeks: 2, step_increase_weeks: 1 };
+
+test("ability score ladder", () => {
+  assert.equal(progressForScore(11, LADDER), 14); // 2 perfect weeks
+  assert.equal(progressForScore(12, LADDER), 35); // then 3 more
+  assert.equal(progressForScore(20, LADDER), 455); // 65 weeks from 10 to 20
+  assert.equal(progressForScore(9, LADDER), -14);
+  assert.deepEqual(scoreProgress(0, LADDER), { score: 10, pct: 0, next: 11, daysToNext: 14 });
+  assert.deepEqual(scoreProgress(7, LADDER), { score: 10, pct: 50, next: 11, daysToNext: 7 });
+  assert.equal(scoreProgress(14, LADDER).score, 11);
+  assert.deepEqual(scoreProgress(24.5, LADDER), { score: 11, pct: 50, next: 12, daysToNext: 10.5 });
+  assert.deepEqual(scoreProgress(455, LADDER), { score: 20, pct: 100, next: null, daysToNext: null });
+  // Below baseline: -20 is a 9 (-35 < p <= -14), 6 good days from 10 again.
+  const low = scoreProgress(-20, LADDER);
+  assert.deepEqual([low.score, low.next, low.daysToNext], [9, 10, 6]);
+  assert.equal(scoreProgress(-2, LADDER).score, 10);
+  assert.equal(progressTrend(10.625, 8), "Up");
+  assert.equal(progressTrend(-4, -2), "Down");
+  assert.equal(progressTrend(3, undefined), "Steady");
 });

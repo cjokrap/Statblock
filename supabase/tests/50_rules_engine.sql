@@ -1,5 +1,5 @@
 -- Rules engine tests: three made-up weeks for one user, scored against the
--- v1 rules by hand. Runs on a freshly migrated database (run_local.sh).
+-- active rules by hand (v2: scores earned over weeks). Runs on a freshly migrated database (run_local.sh).
 \set ON_ERROR_STOP 1
 \set A '''aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'''
 \set B '''bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'''
@@ -193,32 +193,52 @@ begin
          'injury skip lowers the week''s target';
 end $$;
 
--- ---- Ability scores on Sep 21 ---------------------------------------------
--- Window Sep 8-21; judged days Sep 8-20 (13). Fully logged: 8-12, 14, 15 (7).
--- Unlogged: 13, 17-20 (5). In window: 8-12 (5). Over: 14. Under: 15.
--- WIS 10 + 8x7/13 - 2x5 = 4.3 -> 4
--- DEX 10 + 6x5/13 - 1   = 11.3 -> 11;  CON the same with the under day -> 11
--- INT: rice's calcium is the only measured INT nutrient, far below 50% of
---      1,000 mg on all 7 fully logged days: 10 - 0.5 x 7 = 6.5 -> 7
--- STR: sessions on judged days 5 (8, 10, 12, 14, 15); planned 13 x 4/7 - 1
---      excused = 6.43; 4 x 5/6.43 = 3.11; PR +1; week of Sep 14 missed 4-2-1 = 1
---      -> 10 + 3.11 + 1 - 1 = 13.1 -> 13
--- CHA: date night 3 x 0.5 + weigh-in 0.5 = 2; last log Sep 15 (6 days) -> 12
+-- ---- Ability scores (rules v2: earned over weeks) --------------------------
+-- The ladder: progress is in good days (a perfect week is 7). 10 -> 11 costs
+-- 2 weeks (14), 11 -> 12 three more (35 total), ... 19 -> 20 eleven more
+-- (455 = 65 weeks). Below 10 it mirrors down to 3.
+do $$
+declare c jsonb := game.rule('stats.progression');
+begin
+  assert game.progress_for_score(11, c) = 14, '10->11 is 2 weeks';
+  assert game.progress_for_score(12, c) = 35, '11->12 adds 3 weeks';
+  assert game.progress_for_score(20, c) = 455, '10->20 is 65 weeks';
+  assert game.progress_for_score(9, c) = -14, 'mirrors below 10';
+  assert game.progress_for_score(3, c) = -245, 'down to 3';
+  assert game.score_for_progress(0, c) = 10 and game.score_for_progress(13.9, c) = 10
+     and game.score_for_progress(14, c) = 11 and game.score_for_progress(34.9, c) = 11
+     and game.score_for_progress(455, c) = 20, 'scores up the ladder';
+  assert game.score_for_progress(-13.9, c) = 10 and game.score_for_progress(-14, c) = 9
+     and game.score_for_progress(-245, c) = 3, 'scores down the ladder';
+end $$;
+
+-- Sep 21. The game started Aug 20 (the first event logged in the app);
+-- judging started Sep 7, so judged days are Sep 7-20.
+-- WIS: fully logged 7-12, 14, 15 (+8); unlogged 13, 17-20 (-2 x 5) -> -2
+-- DEX: in window 7-12 (+6), over on 14 (-1) -> 5;  CON: under on 15 -> 5
+-- INT: 8 fully logged days with micros under 50% (-0.5 x 8) -> -4
+-- STR: week of Sep 7, 4 of 4 sessions (+7) and a PR (+1); week of Sep 14,
+--      2 sessions (+1.75 x 2) and 1 missed after the injury skip
+--      (4 - 2 - 1 = 1, -0.875 on Sunday) -> 10.625. Aug 20 had no settings,
+--      so no planned sessions to earn against.
+-- CHA: date night 3 x 0.875 + a weigh-in 0.875 -> 3.5; no gap over 7 days.
+-- Every score is still 10: two weeks of mixed days is far from 2 perfect weeks.
 do $$
 declare A uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'; s record;
 begin
   select * into s from public.stat_snapshots where user_id = A and local_date = '2026-09-21';
-  assert s.wis = 4, 'WIS ' || s.wis;
-  assert s.dex = 11, 'DEX ' || s.dex;
-  assert s.con = 11, 'CON ' || s.con;
-  assert s."int" = 7, 'INT ' || s."int";
-  assert s.str = 13, 'STR ' || s.str;
-  assert s.cha = 12, 'CHA ' || s.cha;
+  assert (s.progress ->> 'wis')::numeric = -2, 'WIS progress ' || (s.progress ->> 'wis');
+  assert (s.progress ->> 'dex')::numeric = 5, 'DEX progress ' || (s.progress ->> 'dex');
+  assert (s.progress ->> 'con')::numeric = 5, 'CON progress ' || (s.progress ->> 'con');
+  assert (s.progress ->> 'int')::numeric = -4, 'INT progress ' || (s.progress ->> 'int');
+  assert (s.progress ->> 'str')::numeric = 10.625, 'STR progress ' || (s.progress ->> 'str');
+  assert (s.progress ->> 'cha')::numeric = 3.5, 'CHA progress ' || (s.progress ->> 'cha');
+  assert (s.str, s.dex, s.con, s."int", s.wis, s.cha) = (10, 10, 10, 10, 10, 10), 'all still 10';
   assert not s.str_frozen, 'not frozen';
-  -- Before settings, day-judged stats sit at baseline.
-  select * into s from public.stat_snapshots where user_id = A and local_date = '2026-08-25';
-  assert (s.wis, s.dex, s.con, s."int", s.cha) = (10, 10, 10, 10, 10), 'baseline before settings';
-  assert (select min(local_date) from public.stat_snapshots where user_id = A) = '2026-08-20', 'snapshots start at first event';
+  -- After the first week: STR had 7 + 1 = 8 by Sep 13.
+  assert (select (progress ->> 'str')::numeric from public.stat_snapshots
+          where user_id = A and local_date = '2026-09-13') = 8, 'STR after week 1';
+  assert (select min(local_date) from public.stat_snapshots where user_id = A) = '2026-08-20', 'snapshots start at the game''s start';
   assert (select max(local_date) from public.stat_snapshots where user_id = A) = '2026-09-21', 'through today';
 end $$;
 
@@ -240,14 +260,13 @@ do $$ begin
 end $$;
 
 -- ---- STR freezes during injury -------------------------------------------
--- Injury from Sep 17: STR keeps Sep 16's value. On Sep 16 the window is
--- Sep 3-16 with judged days 7-16 (10): 6 sessions / 5.71 planned -> 4
--- (capped), PR +1, no shortfall -> 15.
+-- Injury from Sep 17: STR progress stops moving, so the missed-session
+-- penalty on Sunday Sep 20 doesn't land: 10.625 + 0.875 = 11.5.
 insert into public.recovery_periods (user_id, reason, starts_on) values (:A, 'injury', '2026-09-17');
 select game.recompute(:A, '2026-09-14', '2026-09-21');
 do $$ begin
-  assert (select str from public.stat_snapshots
-          where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and local_date = '2026-09-21') = 15, 'frozen STR';
+  assert (select (progress ->> 'str')::numeric from public.stat_snapshots
+          where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and local_date = '2026-09-21') = 11.5, 'frozen STR';
   assert (select str_frozen from public.stat_snapshots
           where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and local_date = '2026-09-21'), 'marked frozen';
   assert not (select str_frozen from public.stat_snapshots
@@ -256,32 +275,31 @@ end $$;
 delete from public.recovery_periods;
 
 -- ---- Voids ---------------------------------------------------------------
--- Voiding Sep 16's breakfast makes it unlogged: WIS 10 + 4.31 - 12 -> 2.3,
--- clamped to 3. Its meal-slot XP disappears.
+-- Voiding Sep 16's breakfast makes it unlogged: WIS -2 - 2 = -4 (still 10).
+-- Its meal-slot XP disappears.
 insert into public.events (user_id, type, payload)
 select :A, 'void', jsonb_build_object('target_event_id', e.id)
 from public.events e where e.user_id = :A and e.type = 'food' and e.local_date = '2026-09-16';
 select game.recompute(:A, '2026-09-14', '2026-09-21');
 do $$ begin
-  assert (select wis from public.stat_snapshots
-          where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and local_date = '2026-09-21') = 3, 'WIS clamped at 3';
+  assert (select (progress ->> 'wis')::numeric from public.stat_snapshots
+          where user_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and local_date = '2026-09-21') = -4, 'WIS -4';
   assert (select sum(xp) from public.xp_ledger where track_code = 'quartermaster') = 400, 'voided meal loses its 5 XP';
 end $$;
 
--- ---- Rebalancing: publish v2, replay ---------------------------------------
+-- ---- Rebalancing: publish v3, replay ---------------------------------------
 -- T1 sets worth 10 instead of 8: barbarian +2 x 3 sets x 7 sessions = +42.
-insert into public.rules_versions (version, notes) values (2, 'test: heavier T1');
+insert into public.rules_versions (version, notes) values (3, 'test: heavier T1');
 insert into public.rules_config (version, key, value, notes)
-select 2, key, value, notes from public.rules_config where version = 1;
+select 3, key, value, notes from public.rules_config where version = 2;
 update public.rules_config set value = jsonb_set(value, '{by_tier,T1,xp}', '10')
-where version = 2 and key = 'xp.workout_set';
-update public.rules_versions set is_active = false where version = 1;
-update public.rules_versions set is_active = true where version = 2;
+where version = 3 and key = 'xp.workout_set';
+update public.rules_versions set is_active = (version = 3);
 select game.replay_all();
 do $$ begin
-  assert (select sum(xp) from public.xp_ledger where track_code = 'barbarian') = 280, 'v2 barbarian 238 + 42';
-  assert (select bool_and(rules_version = 2) from public.xp_ledger), 'ledger rebuilt under v2';
-  assert (select bool_and(rules_version = 2) from public.stat_snapshots), 'snapshots rebuilt under v2';
+  assert (select sum(xp) from public.xp_ledger where track_code = 'barbarian') = 280, 'v3 barbarian 238 + 42';
+  assert (select bool_and(rules_version = 3) from public.xp_ledger), 'ledger rebuilt under v3';
+  assert (select bool_and(rules_version = 3) from public.stat_snapshots), 'snapshots rebuilt under v3';
 end $$;
 
 -- ---- recompute_recent and client access -----------------------------------
@@ -306,5 +324,52 @@ do $$ begin
   assert (select level from public.character_level) >= 5, 'A reads own level';
 end $$;
 reset role;
+
+-- ---- Climbing and falling: a second player -----------------------------------
+-- C starts Aug 1 and fully logs Aug 1-14: 14 good days of WIS, a score of
+-- 11 on Aug 14. Then nothing: Aug 15 - Sep 20 is 37 unlogged days,
+-- -74 -> -60, which is 8 on the ladder (9 at -14, 8 at -35, 7 at -63).
+insert into auth.users (id, email) values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'c@example.com');
+insert into public.user_settings (user_id, effective_from, calorie_target, protein_g, carbs_g, fat_g, water_goal_ml)
+values ('cccccccc-cccc-cccc-cccc-cccccccccccc', '2026-08-01', 2000, 150, 200, 70, 2500);
+\o /dev/null
+do $$
+declare d date; m public.meal; ev bigint;
+begin
+  for d in select generate_series(date '2026-08-01', date '2026-08-14', interval '1 day')::date loop
+    foreach m in array array['breakfast', 'lunch', 'dinner']::public.meal[] loop
+      insert into public.events (user_id, type, occurred_at)
+      values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'food', (d + time '12:00') at time zone 'America/Chicago')
+      returning id into ev;
+      insert into public.food_log (event_id, food_id, grams, meal)
+      values (ev, (select id from public.foods where source_id = 't-chicken'), 100, m);
+    end loop;
+  end loop;
+end $$;
+-- A workout imported from Liftosaur, from before C started playing.
+do $$ declare s bigint; ev bigint; begin
+  insert into public.events (user_id, type, occurred_at, source, source_ref)
+  values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'workout_session', '2026-07-20 17:00-05', 'liftosaur', 'c:1') returning id into s;
+  insert into public.workout_sessions (event_id, external_id) values (s, '1');
+  insert into public.events (user_id, type, occurred_at, source, source_ref)
+  values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'workout_set', '2026-07-20 17:00-05', 'liftosaur', 'c:1:0') returning id into ev;
+  insert into public.workout_sets (event_id, session_event_id, exercise, tier, set_index, reps, weight_kg)
+  values (ev, s, 'Squat', 'T1', 0, 5, 100);
+end $$;
+select game.replay('cccccccc-cccc-cccc-cccc-cccccccccccc');
+\o
+do $$
+declare C uuid := 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+begin
+  assert game.game_starts(C) = '2026-08-01', 'imported history doesn''t start the game';
+  assert not exists (select 1 from public.xp_ledger where user_id = C and track_code in ('barbarian', 'fighter')),
+         'imported workouts from before the start earn no XP';
+  assert (select wis from public.stat_snapshots where user_id = C and local_date = '2026-08-13') = 10,
+         '13 good days is still 10';
+  assert (select (wis, (progress ->> 'wis')::numeric) = (11, 14::numeric) from public.stat_snapshots
+          where user_id = C and local_date = '2026-08-14'), 'two perfect weeks: WIS 11';
+  assert (select (wis, (progress ->> 'wis')::numeric) = (8, -60::numeric) from public.stat_snapshots
+          where user_id = C and local_date = '2026-09-21'), 'five weeks unlogged: WIS 8';
+end $$;
 
 select 'all rules engine tests passed' as result;

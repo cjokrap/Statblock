@@ -291,6 +291,25 @@ await page.waitForSelector("section[aria-label=Character]");
 if (await page.$("a[aria-label*='Protein Bar']")) throw new Error("the bar should be removed");
 step("bar removed from its edit page");
 
+// Recent tab: the last 7 days' foods, one tap to add to the chosen meal.
+await page.goto(BASE + "/log?meal=dinner");
+await page.click("a:has-text('Recent · 7 days')");
+await page.waitForSelector("button[aria-label^='Add Greek Yogurt']");
+const recentNames = await page.$$eval("[class*=recentRow] [class*=resultName]", (els) => els.map((e) => e.textContent));
+step("recent: " + recentNames.join(" | "));
+await page.click("button[aria-label^='Add Greek Yogurt']");
+await page.waitForSelector("p[role=status]:has-text('Added Greek Yogurt')");
+step("recent add: " + (await page.textContent("p[role=status]")));
+await page.screenshot({ path: `${out}/13-recent.png`, fullPage: true });
+if (!page.url().includes("tab=recent")) throw new Error("adding from Recent should stay on Recent");
+
+// Ability scores show progress to the next point (rules v2).
+await page.goto(BASE + "/");
+const scoreCard = (await page.textContent("section[aria-labelledby=scores-heading]")).replace(/\s+/g, " ");
+await (await page.$("section[aria-labelledby=scores-heading]")).screenshot({ path: `${out}/14-scores.png` });
+step("scores: " + scoreCard.slice(0, 160));
+if (!/good days? to 11/.test(scoreCard)) throw new Error("scores should show good days to the next point");
+
 console.log("page errors:", errors.length ? errors : "none");
 await browser.close();
 if (errors.length) process.exit(1);
