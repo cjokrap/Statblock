@@ -277,4 +277,41 @@ do $$ begin
 end $$;
 reset role;
 
+-- Fiber quest: food plus the stack's fiber, done when the running total
+-- reaches the goal (A's fiber_g is 35).
+insert into public.supplements (source, owner_user_id, name, serving_label)
+values ('custom', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Test fiber caps', '6 capsules');
+insert into public.supplement_nutrients (supplement_id, nutrient_id, amount_per_serving)
+select s.id, n.id, 3 from public.supplements s, public.nutrients n
+where s.name = 'Test fiber caps' and n.code = 'fiber';
+insert into public.daily_stack_items (user_id, supplement_id, servings)
+select 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', id, 2 from public.supplements where name = 'Test fiber caps';
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
+\o /dev/null
+select public.log_food((select id from public.foods where source_id = 't-pasta'), 1000, 'dinner');
+select public.rescore_me();
+\o
+do $$
+declare
+  today date := public.my_today();
+  before numeric := (select progress from public.quest_progress where quest_code = 'hit_fiber' and period_start = today);
+  stack_ev bigint;
+begin
+  assert (select target from public.quest_progress where quest_code = 'hit_fiber' and period_start = today) = 35,
+         'the fiber goal is the setting';
+  assert before >= 32 and before < 35, 'food alone falls short: ' || before;
+  assert (select completed_at from public.quest_progress where quest_code = 'hit_fiber' and period_start = today) is null,
+         'not done yet';
+  stack_ev := public.log_stack();
+  perform public.rescore_me();
+  assert (select progress from public.quest_progress where quest_code = 'hit_fiber' and period_start = today) = before + 6,
+         'two servings of 3 g add 6 g';
+  assert (select completed_at from public.quest_progress where quest_code = 'hit_fiber' and period_start = today)
+         = (select occurred_at from public.events where id = stack_ev), 'the stack finishes the quest';
+  assert (select sum(xp) from public.xp_ledger where rule_key = 'quest.hit_fiber' and local_date = today) = 10,
+         '10 Alchemist XP';
+end $$;
+reset role;
+
 select 'all app support tests passed' as result;

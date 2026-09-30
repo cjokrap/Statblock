@@ -96,6 +96,9 @@ export function questView(
     case "hit_protein":
       detail = done ? `Hit at ${at}` : `${fmt(q.target - q.progress)} g to go`;
       break;
+    case "hit_fiber":
+      detail = done ? `Hit at ${at}` : `${fmt(q.target - q.progress)} g to go · your stack counts`;
+      break;
     case "drink_water":
       detail = done ? `Hit at ${at}` : `${water(q.target - q.progress)} to go`;
       break;

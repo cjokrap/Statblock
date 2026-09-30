@@ -31,6 +31,10 @@ test("quest text", () => {
   assert.deepEqual(questView(q({}), opts), { done: false, badge: "64%", detail: "64 g to go", xp: "+10 ALC" });
   assert.equal(questView(q({ code: "drink_water", progress: 1893, target: 2957 }), opts).detail, "36 oz to go");
   assert.equal(
+    questView(q({ code: "hit_fiber", progress: 12, target: 35 }), opts).detail,
+    "23 g to go · your stack counts",
+  );
+  assert.equal(
     questView(q({ code: "drink_water", progress: 500, target: 2000 }), { ...opts, waterUnit: "ml" }).detail,
     "1,500 mL to go",
   );

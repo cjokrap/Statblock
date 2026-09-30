@@ -56,6 +56,7 @@ it happened.
 | Take the stack | The user has active stack items | The stack is logged |
 | Train | Days not in `rest_days` | A session is logged. No XP, since the sets earn it |
 | Hit protein | Every day | Running protein total reaches the target |
+| Hit fiber | Every day | Running fiber total, food plus the daily stack's fiber, reaches the goal (`fiber_g`, or 14 g per 1,000 kcal when unset). 10 Alchemist XP |
 | Drink your water | Water goal > 0 | Running water total reaches the goal |
 | Carb ceiling | Eating style low carb or keto | At the end of a fully logged day, carbs (net if set) are at or under the ceiling |
 | Calorie window | Every day | At the end of a fully logged day, kcal is within ±`calorie_window_pct` of the target |

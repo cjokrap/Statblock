@@ -48,7 +48,7 @@ steps are in `docs/database.md`.
   (running, cycling, swimming), Druid (walking, hiking, yard work), Monk
   (mobility, rehab).
 - **Jobs (food and habits):** Quartermaster (logging), Alchemist (protein,
-  water, the daily supplement stack, carb ceilings), Cook and Provisioner
+  fiber, water, the daily supplement stack, carb ceilings), Cook and Provisioner
   (recipes and meal prep, later).
 - **Ability scores:** 3 to 20, baseline 10, earned over weeks (rules v2): a
   perfect week is 7 good days of progress, 10 -> 11 takes 2 perfect weeks
