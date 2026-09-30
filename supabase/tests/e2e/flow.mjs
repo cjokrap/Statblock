@@ -184,6 +184,7 @@ step("hit points: " + hpText.replace(/\s+/g, " ").slice(0, 120));
 const questNames = await page.$$eval("section[aria-labelledby=quests-heading] li", (els) => els.map((e) => e.textContent));
 step("quests: " + questNames.length + ", boss: " + (await page.textContent("[class*=bossName]")));
 if (!questNames.some((q) => q.includes("Take the daily stack") && q.includes("(open)"))) throw new Error("stack quest should be open");
+if (!questNames.some((q) => q.includes("Hit fiber"))) throw new Error("the fiber quest should show");
 
 await page.click("button:has-text('Take stack')");
 await page.waitForSelector("text=Taken at");
