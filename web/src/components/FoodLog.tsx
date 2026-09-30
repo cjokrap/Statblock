@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { logFood, removeFood } from "@/app/actions/food";
+import { removeFood } from "@/app/actions/food";
 import type { LoggedItem } from "@/lib/food";
 import { forGrams, MEAL_LABEL, MEALS, type Meal } from "@/lib/meals";
 import styles from "./FoodLog.module.css";
@@ -8,11 +8,7 @@ function amount(it: LoggedItem) {
   return it.portionLabel ?? `${Math.round(it.grams)} g`;
 }
 
-export function FoodLog({ items, recents, suggestedMeal }: {
-  items: LoggedItem[];
-  recents: LoggedItem[];
-  suggestedMeal: Meal;
-}) {
+export function FoodLog({ items, suggestedMeal }: { items: LoggedItem[]; suggestedMeal: Meal }) {
   const totals = items.reduce(
     (t, it) => {
       const n = forGrams(it.food, it.grams);
@@ -34,26 +30,6 @@ export function FoodLog({ items, recents, suggestedMeal }: {
       <p className={styles.totals}>
         {Math.round(totals.kcal).toLocaleString("en-US")} kcal · {Math.round(totals.protein)} g protein today
       </p>
-
-      {recents.length > 0 && (
-        <div className={styles.recents}>
-          <span className={styles.recentsLabel}>Recent, add to {MEAL_LABEL[suggestedMeal].toLowerCase()}:</span>
-          <div className={styles.chips}>
-            {recents.map((r) => (
-              <form key={`${r.food.id}:${r.grams}`} action={logFood}>
-                <input type="hidden" name="food_id" value={r.food.id} />
-                <input type="hidden" name="grams" value={r.grams} />
-                <input type="hidden" name="meal" value={suggestedMeal} />
-                <input type="hidden" name="portion_label" value={r.portionLabel ?? ""} />
-                <input type="hidden" name="stay" value="1" />
-                <button type="submit" className={styles.chip}>
-                  {shortName(r.food.name)}, {amount(r)}
-                </button>
-              </form>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className={styles.meals}>
         {MEALS.map((meal) => {
@@ -93,9 +69,4 @@ export function FoodLog({ items, recents, suggestedMeal }: {
       </div>
     </section>
   );
-}
-
-function shortName(name: string) {
-  const first = name.split(",")[0];
-  return first.length > 28 ? `${first.slice(0, 27)}…` : first;
 }

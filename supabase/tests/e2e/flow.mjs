@@ -46,17 +46,23 @@ step("totals: " + (await page.textContent('[class*="totals"]')));
 step("sheet after log: " + (await page.textContent("section[aria-label=Character]")).replace(/\s+/g, " ").slice(0, 120));
 await page.screenshot({ path: `${out}/5-after-log.png`, fullPage: true });
 
-// Quick re-add from recents, then remove it.
-const chip = await page.$('button[class*="chip"]');
-step("recent chip: " + (chip ? await chip.textContent() : "none"));
-if (chip) {
-  await chip.click();
-  await page.waitForFunction(() => document.querySelectorAll('[class*="itemName"]').length === 2);
-  step("after recent tap: " + (await page.$$eval('[class*="itemName"]', (e) => e.length)) + " items");
-  await page.click('button[aria-label^="Remove"] >> nth=0');
-  await page.waitForFunction(() => document.querySelectorAll('[class*="itemName"]').length === 1);
-  step("after remove: 1 item");
-}
+// Add food opens on favorites and the last 7 days: one tap re-adds the
+// eggs, and the page stays put to add more. Then remove the second entry.
+await page.click("text=+ Add food");
+await page.waitForSelector("#recent-heading");
+if (await page.$("a:has-text('Recent · 7 days')")) throw new Error("Recent is no longer a separate tab");
+const firstRecent = await page.$$eval("#recent-heading + ul [class*=resultName]", (els) => els.map((e) => e.textContent));
+step("add food opens on recent: " + firstRecent.join(" | "));
+if (!firstRecent.length) throw new Error("the eggs should be in Recent");
+await page.click("#recent-heading + ul button[aria-label^='Add'] >> nth=0");
+await page.waitForSelector("p[role=status]:has-text('Added')");
+step("re-added: " + (await page.textContent("p[role=status]")));
+await page.goto(BASE + "/");
+await page.waitForFunction(() => document.querySelectorAll('[class*="itemName"]').length === 2);
+if (await page.$('button[class*="chip"]')) throw new Error("Today no longer has recent chips");
+await page.click('button[aria-label^="Remove"] >> nth=0');
+await page.waitForFunction(() => document.querySelectorAll('[class*="itemName"]').length === 1);
+step("after remove: 1 item");
 // A packaged food from USDA FoodData Central (the fake one in fake_fdc.py):
 // shown under "Packaged foods", saved on first log, then found locally.
 await page.click("text=+ Add lunch");
@@ -291,17 +297,90 @@ await page.waitForSelector("section[aria-label=Character]");
 if (await page.$("a[aria-label*='Protein Bar']")) throw new Error("the bar should be removed");
 step("bar removed from its edit page");
 
-// Recent tab: the last 7 days' foods, one tap to add to the chosen meal.
+// Favorites: star a recent food with its amount, then add it in one tap.
 await page.goto(BASE + "/log?meal=dinner");
-await page.click("a:has-text('Recent · 7 days')");
-await page.waitForSelector("button[aria-label^='Add Greek Yogurt']");
-const recentNames = await page.$$eval("[class*=recentRow] [class*=resultName]", (els) => els.map((e) => e.textContent));
-step("recent: " + recentNames.join(" | "));
-await page.click("button[aria-label^='Add Greek Yogurt']");
+await page.waitForSelector("#favorites-heading");
+await page.click("#recent-heading + ul button[aria-label^='Save Greek Yogurt']");
+await page.waitForSelector("#favorites-heading + ul button[aria-label^='Add Greek Yogurt']");
+const favNames = await page.$$eval("#favorites-heading + ul [class*=resultName]", (els) => els.map((e) => e.textContent));
+step("favorites: " + favNames.join(" | "));
+await page.click("#favorites-heading + ul button[aria-label^='Add Greek Yogurt']");
 await page.waitForSelector("p[role=status]:has-text('Added Greek Yogurt')");
-step("recent add: " + (await page.textContent("p[role=status]")));
-await page.screenshot({ path: `${out}/13-recent.png`, fullPage: true });
-if (!page.url().includes("tab=recent")) throw new Error("adding from Recent should stay on Recent");
+step("favorite add: " + (await page.textContent("p[role=status]")));
+await page.screenshot({ path: `${out}/13-favorites-recent.png`, fullPage: true });
+if (!page.url().includes("/log?meal=dinner")) throw new Error("adding a favorite should stay on Add food");
+// Searching swaps the lists for results.
+await page.fill("#food-search", "egg");
+await page.click("button:has-text('Search')");
+await page.waitForSelector("text=Favorites and recent foods");
+if (await page.$("#favorites-heading")) throw new Error("search results replace favorites");
+// Un-star from the food page.
+await page.goto(BASE + "/log?meal=dinner");
+await page.click("#favorites-heading + ul a >> nth=0");
+await page.click("button:has-text('★ Favorite')");
+await page.waitForSelector("button:has-text('☆ Save as a favorite')");
+step("un-starred from the food page");
+
+// Recipes: ingredients, cooked weight and servings; log a serving by
+// weight; the recipe comes first in search; editing it later leaves the
+// logged serving alone.
+await page.goto(BASE + "/recipes");
+await page.fill("input[name=name]", "Parko High Protein Pasta");
+await page.click("button:has-text('Create and add ingredients')");
+await page.waitForSelector("text=Add ingredients to see the totals.");
+const recipeUrl = page.url();
+await page.click("text=+ Add ingredient");
+await page.fill("#ingredient-search", "egg");
+await page.click("button:has-text('Search')");
+await page.click("ul li a >> nth=0");
+await page.selectOption("#unit", "g");
+await page.fill("#qty", "200");
+await page.click("button:has-text('Add to recipe')");
+await page.waitForSelector("text=Log a serving");
+await page.click("text=+ Add ingredient");
+await page.click("#recent-heading + ul a:has-text('Greek Yogurt')");
+await page.selectOption("#unit", "g");
+await page.fill("#qty", "300");
+await page.click("button:has-text('Add to recipe')");
+await page.waitForSelector("text=Ingredients · 500 g");
+await page.fill("input[name=cooked_grams]", "400");
+await page.fill("input[name=servings]", "2");
+await page.click("button:has-text('Save details')");
+await page.waitForSelector("p[role=status]:has-text('Saved')");
+const totalsText = (await page.textContent("[aria-label='Recipe totals']")).replace(/\s+/g, " ");
+step("recipe totals: " + totalsText);
+if (!totalsText.includes("Whole · 400 g") || !totalsText.includes("Serving · 200 g")) throw new Error("recipe totals");
+await page.screenshot({ path: `${out}/15-recipe.png`, fullPage: true });
+await page.click("text=Log a serving");
+await page.waitForSelector("#qty");
+const recipeOptions = await page.$$eval("#unit option", (o) => o.map((x) => x.textContent));
+step("recipe portions: " + recipeOptions.join(" | "));
+if (recipeOptions[0] !== "1 serving (200 g)") throw new Error("a serving should be half the cooked weight");
+const servingKcal = await page.textContent("dl div:first-child dd");
+await page.click("button[type=submit]");
+await page.waitForSelector("a[aria-label*='Parko High Protein Pasta']");
+step(`logged a serving: ${servingKcal} kcal`);
+await page.goto(BASE + "/log?meal=dinner&q=" + encodeURIComponent("Parko High Protein Pasta"));
+await page.waitForSelector("ul li a");
+const firstHit = (await page.textContent("ul li a >> nth=0")).replace(/\s+/g, " ");
+step("search first result: " + firstHit);
+if (!firstHit.includes("Parko High Protein Pasta") || !firstHit.includes("Recipe")) throw new Error("the recipe should come first");
+await page.goto(recipeUrl);
+await page.fill("input[name=grams] >> nth=0", "400");
+await page.click("button:has-text('Update') >> nth=0");
+await page.waitForSelector("text=Ingredients · 700 g");
+await page.goto(BASE + "/");
+const pastaRow = await page.textContent("a[aria-label*='Parko High Protein Pasta'] + span");
+step(`logged serving after the recipe changed: ${pastaRow} kcal`);
+if (pastaRow !== servingKcal) throw new Error("editing the recipe must not change what was logged");
+await page.goto(recipeUrl);
+await page.click("text=Delete recipe");
+await page.click("button:has-text('Delete')");
+await page.waitForURL(/\/recipes$/);
+await page.goto(BASE + "/log?meal=dinner&q=" + encodeURIComponent("Parko High Protein Pasta"));
+await page.waitForSelector("#packaged-heading");
+if ((await page.$$eval("ul [class*=badge]", (b) => b.map((x) => x.textContent))).includes("Recipe")) throw new Error("a deleted recipe leaves search");
+step("recipe deleted, gone from search");
 
 // Ability scores show progress to the next point (rules v2).
 await page.goto(BASE + "/");

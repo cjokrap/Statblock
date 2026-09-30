@@ -17,9 +17,13 @@ type Props = {
   // Editing a logged entry: start from its amount, let the meal change, and
   // label the button "Save changes".
   edit?: { unit: string; qty: string };
+  // Replaces "Add to <meal>", e.g. "Add to recipe".
+  submitLabel?: string;
+  // Stored foods: star this food at the chosen amount, or un-star it.
+  favorite?: { on: boolean; save: (formData: FormData) => Promise<void>; remove: (formData: FormData) => Promise<void> };
 };
 
-export function AmountForm({ action, ids, per100, portions, meal, firstInSlot, edit }: Props) {
+export function AmountForm({ action, ids, per100, portions, meal, firstInSlot, edit, submitLabel, favorite }: Props) {
   // unit: "g" or the index of a household portion
   const [unit, setUnit] = useState<string>(edit?.unit ?? (portions.length ? "0" : "g"));
   const [qty, setQty] = useState<string>(edit?.qty ?? (portions.length ? "1" : "100"));
@@ -119,8 +123,19 @@ export function AmountForm({ action, ids, per100, portions, meal, firstInSlot, e
             : "Save changes"
           : pending
             ? "Adding…"
-            : `Add to ${MEAL_LABEL[meal]}${firstInSlot ? " · +5 Quartermaster XP" : ""}`}
+            : (submitLabel ?? `Add to ${MEAL_LABEL[meal]}${firstInSlot ? " · +5 Quartermaster XP" : ""}`)}
       </button>
+      {favorite && (
+        <button
+          type="submit"
+          formAction={favorite.on ? favorite.remove : favorite.save}
+          className={styles.favorite}
+          disabled={(!favorite.on && !valid) || pending}
+          aria-pressed={favorite.on}
+        >
+          {favorite.on ? "★ Favorite · tap to remove" : `☆ Save as a favorite${valid ? `, ${label || `${Math.round(grams)} g`}` : ""}`}
+        </button>
+      )}
     </form>
   );
 }

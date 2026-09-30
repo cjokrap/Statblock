@@ -167,7 +167,8 @@ stand-in for Supabase and headless Chromium:
 
 ## Later (not v1)
 
-- Recipes and shopping list (Cook and Provisioner jobs).
+- Cook XP for recipes, and the shopping list (Provisioner). Recipes themselves
+  are built (`recipes`, `recipe_ingredients`, `recompute_recipe`).
 - A homegrown workout tracker with progressive overload, replacing
   Liftosaur. The game layer only reads sets from events, so the swap won't
   touch XP or stats.

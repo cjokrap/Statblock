@@ -5,7 +5,7 @@ import { FoodLog } from "@/components/FoodLog";
 import { TrackList } from "@/components/TrackList";
 import { loadCharacter } from "@/lib/character";
 import Link from "next/link";
-import { recentFoods, todaysLog } from "@/lib/food";
+import { todaysLog } from "@/lib/food";
 import { loadToday } from "@/lib/today";
 import { forGrams, localNow, mealForHour } from "@/lib/meals";
 import { signOut } from "../login/actions";
@@ -13,7 +13,7 @@ import styles from "./shell.module.css";
 
 export default async function TodayPage() {
   const c = await loadCharacter();
-  const [items, recents, t] = await Promise.all([todaysLog(c.timezone), recentFoods(), loadToday()]);
+  const [items, t] = await Promise.all([todaysLog(c.timezone), loadToday()]);
   const totals = items.reduce(
     (sum, it) => {
       const n = forGrams(it.food, it.grams);
@@ -59,7 +59,7 @@ export default async function TodayPage() {
       <AbilityScores c={c} />
       {t.targets && <HitPoints totals={totals} targets={t.targets} stackFiber={t.stack.fiberG} />}
       {t.targets && <Quests today={t} />}
-      <FoodLog items={items} recents={recents} suggestedMeal={mealForHour(localNow(c.timezone).hour)} />
+      <FoodLog items={items} suggestedMeal={mealForHour(localNow(c.timezone).hour)} />
       <Stack today={t} />
       <Water today={t} />
       <Training today={t} />

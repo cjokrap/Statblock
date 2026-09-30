@@ -13,6 +13,7 @@ export type FoodRow = {
   carbs_100g: number | null;
   fat_100g: number | null;
   fiber_100g: number | null;
+  recipe_id: number | null; // set on foods made from one of the user's recipes
 };
 
 export type Portion = { label: string; grams: number };
@@ -26,7 +27,7 @@ export type LoggedItem = {
   food: FoodRow;
 };
 
-const FOOD_COLUMNS = "id, source, source_id, name, brand, kcal_100g, protein_100g, carbs_100g, fat_100g, fiber_100g";
+const FOOD_COLUMNS = "id, source, source_id, name, brand, kcal_100g, protein_100g, carbs_100g, fat_100g, fiber_100g, recipe_id";
 
 export async function userTimezone(): Promise<string> {
   const supabase = await createClient();
@@ -98,21 +99,6 @@ export async function todaysLog(timezone: string): Promise<LoggedItem[]> {
   return loggedItems({ date: localNow(timezone).date });
 }
 
-// Recently logged foods and amounts, for one-tap re-logging.
-export async function recentFoods(max = 6): Promise<LoggedItem[]> {
-  const items = await loggedItems({ limit: 60 });
-  const seen = new Set<string>();
-  const out: LoggedItem[] = [];
-  for (const it of items) {
-    const key = `${it.food.id}:${it.grams}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(it);
-    if (out.length === max) break;
-  }
-  return out;
-}
-
 // One live food entry of the user's, with its food's portions, for editing.
 export async function getEntry(
   eventId: number,
@@ -147,12 +133,36 @@ export async function getEntry(
   };
 }
 
+// A recipe edited after it was logged moves to a new food (the old one keeps
+// its values for the days it was logged). Favorites and recents follow the
+// recipe to its current food; deleted recipes drop out.
+async function currentFoods<T extends { food: FoodRow }>(items: T[]): Promise<T[]> {
+  const recipeIds = [...new Set(items.map((i) => i.food.recipe_id).filter((r): r is number => r !== null))];
+  if (recipeIds.length === 0) return items;
+  const supabase = await createClient();
+  const { data: recipes, error } = await supabase
+    .from("recipes")
+    .select(`id, deleted_at, foods!recipes_food_fk (${FOOD_COLUMNS})`)
+    .in("id", recipeIds);
+  if (error) throw new Error(error.message);
+  const current = new Map(
+    (recipes ?? [])
+      .filter((r) => !r.deleted_at && r.foods)
+      .map((r) => [r.id as number, r.foods as unknown as FoodRow]),
+  );
+  return items.flatMap((it) => {
+    if (it.food.recipe_id === null) return [it];
+    const food = current.get(it.food.recipe_id);
+    return food ? [{ ...it, food }] : [];
+  });
+}
+
 // Everything logged in the last 7 days (today included), newest first, once
 // per food and amount: meal prep repeats, so these are one tap to log again.
 export async function recentWeek(timezone: string): Promise<(LoggedItem & { times: number })[]> {
   const today = localNow(timezone).date;
   const since = new Date(Date.parse(today + "T00:00:00Z") - 6 * 86_400_000).toISOString().slice(0, 10);
-  const items = await loggedItems({ since });
+  const items = await currentFoods(await loggedItems({ since }));
   const byKey = new Map<string, LoggedItem & { times: number }>();
   for (const it of items) {
     const key = `${it.food.id}:${it.grams}:${it.portionLabel ?? ""}`;
@@ -161,4 +171,27 @@ export async function recentWeek(timezone: string): Promise<(LoggedItem & { time
     else byKey.set(key, { ...it, times: 1 });
   }
   return [...byKey.values()];
+}
+
+export type Favorite = { food: FoodRow; grams: number; portionLabel: string | null };
+
+// The user's favorite foods with the amount each is logged at, A to Z.
+export async function favorites(): Promise<Favorite[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("food_favorites")
+    .select(`grams, portion_label, foods (${FOOD_COLUMNS})`);
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []).map((r) => ({
+    food: r.foods as unknown as FoodRow,
+    grams: Number(r.grams),
+    portionLabel: r.portion_label as string | null,
+  }));
+  return (await currentFoods(rows)).sort((a, b) => a.food.name.localeCompare(b.food.name));
+}
+
+// Which of these foods (or their recipes) are favorites.
+export async function favoriteFoodIds(): Promise<Set<number>> {
+  const favs = await favorites();
+  return new Set(favs.map((f) => f.food.id));
 }
