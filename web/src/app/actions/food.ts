@@ -32,7 +32,7 @@ export async function logFood(formData: FormData) {
   if (error) throw new Error(error.message);
   await rescore(supabase);
   revalidatePath("/");
-  // The Recent tab logs several in a row, so it comes back to itself.
+  // Add food logs several in a row from favorites and recents, so it comes back.
   const back = String(formData.get("back") ?? "");
   if (back.startsWith("/log?")) redirect(back);
   if (formData.get("stay") !== "1") redirect("/");
@@ -132,4 +132,41 @@ export async function editFood(formData: FormData) {
   await rescore(supabase);
   revalidatePath("/");
   redirect("/");
+}
+
+// Where to go after a favorite or recipe change: only app pages, never an
+// outside URL.
+function backTo(formData: FormData, fallback: string) {
+  const back = String(formData.get("back") ?? "");
+  return back.startsWith("/") && !back.startsWith("//") ? back : fallback;
+}
+
+// Star a food with the amount chosen, or update that amount. One favorite
+// per food.
+export async function saveFavorite(formData: FormData) {
+  const foodId = Number(formData.get("food_id"));
+  const grams = Number(formData.get("grams"));
+  const portion = String(formData.get("portion_label") ?? "").trim() || null;
+  if (!Number.isInteger(foodId) || !(grams > 0 && grams < 100000)) throw new Error("Invalid favorite");
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getClaims();
+  const userId = auth?.claims?.sub;
+  if (!userId) throw new Error("Not signed in");
+  const { error } = await supabase
+    .from("food_favorites")
+    .upsert(
+      { user_id: userId, food_id: foodId, grams: Math.round(grams * 100) / 100, portion_label: portion },
+      { onConflict: "user_id,food_id" },
+    );
+  if (error) throw new Error(error.message);
+  redirect(backTo(formData, `/log/food/${foodId}`));
+}
+
+export async function removeFavorite(formData: FormData) {
+  const foodId = Number(formData.get("food_id"));
+  if (!Number.isInteger(foodId)) throw new Error("Invalid favorite");
+  const supabase = await createClient();
+  const { error } = await supabase.from("food_favorites").delete().eq("food_id", foodId);
+  if (error) throw new Error(error.message);
+  redirect(backTo(formData, `/log/food/${foodId}`));
 }

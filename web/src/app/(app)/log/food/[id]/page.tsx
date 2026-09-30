@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { logFood } from "@/app/actions/food";
-import { getFood, todaysLog, userTimezone } from "@/lib/food";
+import { logFood, removeFavorite, saveFavorite } from "@/app/actions/food";
+import { favoriteFoodIds, getFood, todaysLog, userTimezone } from "@/lib/food";
 import { isMeal, localNow, mealForHour } from "@/lib/meals";
 import { AmountForm } from "./AmountForm";
 import styles from "./food.module.css";
@@ -28,7 +28,7 @@ export default async function FoodPage({ params, searchParams }: Props) {
   if (!found) notFound();
   const { food, portions } = found;
   const meal = isMeal(sp.meal) ? sp.meal : mealForHour(localNow(tz).hour);
-  const today = await todaysLog(tz);
+  const [today, favs] = await Promise.all([todaysLog(tz), favoriteFoodIds()]);
   const firstInSlot = !today.some((i) => i.meal === meal);
 
   return (
@@ -47,16 +47,22 @@ export default async function FoodPage({ params, searchParams }: Props) {
           <h1 className={styles.name}>{food.name}</h1>
           <p className={styles.source}>
             {food.brand ? `${food.brand} · ` : ""}
-            {SOURCE_NOTE[food.source] ?? ""}
+            {food.recipe_id ? "Your recipe" : (SOURCE_NOTE[food.source] ?? "")}
           </p>
+          {food.recipe_id && (
+            <Link href={`/recipes/${food.recipe_id}`} className={styles.recipeLink}>
+              Edit recipe
+            </Link>
+          )}
         </div>
         <AmountForm
           action={logFood}
-          ids={{ food_id: food.id }}
+          ids={{ food_id: food.id, back: `/log/food/${food.id}?meal=${meal}` }}
           per100={food}
           portions={portions}
           meal={meal}
           firstInSlot={firstInSlot}
+          favorite={{ on: favs.has(food.id), save: saveFavorite, remove: removeFavorite }}
         />
       </div>
     </main>

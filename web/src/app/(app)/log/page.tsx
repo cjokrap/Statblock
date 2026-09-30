@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { fdcConfigured, searchBranded } from "@/lib/fdc";
-import { logFood } from "@/app/actions/food";
+import { logFood, removeFavorite, saveFavorite } from "@/app/actions/food";
 import { SubmitButton } from "@/components/SubmitButton";
-import { recentWeek, searchFoods, userTimezone } from "@/lib/food";
-import { forGrams, isMeal, localNow, MEAL_LABEL, MEALS, mealForHour } from "@/lib/meals";
+import { favorites, recentWeek, searchFoods, userTimezone, type FoodRow } from "@/lib/food";
+import { forGrams, isMeal, localNow, MEAL_LABEL, MEALS, mealForHour, type Meal } from "@/lib/meals";
 import styles from "./log.module.css";
 
 export const metadata = { title: "Add food · Statblock" };
@@ -25,9 +25,7 @@ export default async function LogPage({ searchParams }: Props) {
   const bp = Math.max(1, Math.min(50, Number.parseInt(typeof sp.bp === "string" ? sp.bp : "1", 10) || 1));
   const tz = await userTimezone();
   const meal = isMeal(sp.meal) ? sp.meal : mealForHour(localNow(tz).hour);
-  const tab = sp.tab === "recent" ? "recent" : "search";
   const added = typeof sp.added === "string" ? sp.added : null;
-  if (tab === "recent") return <Recent meal={meal} tz={tz} added={added} />;
   const [results, packagedPage] = await Promise.all([
     // Later pages of packaged foods skip the local results above them.
     q && bp === 1 ? searchFoods(q) : [],
@@ -65,8 +63,6 @@ export default async function LogPage({ searchParams }: Props) {
         ))}
       </nav>
 
-      <Tabs meal={meal} tab="search" />
-
       <form action="/log" method="get" role="search" className={styles.search}>
         <input type="hidden" name="meal" value={meal} />
         <label htmlFor="food-search" className="visually-hidden">
@@ -78,7 +74,6 @@ export default async function LogPage({ searchParams }: Props) {
           type="search"
           defaultValue={q}
           placeholder="Search foods, e.g. ground beef"
-          autoFocus={!q}
           autoComplete="off"
           className={styles.input}
         />
@@ -87,15 +82,32 @@ export default async function LogPage({ searchParams }: Props) {
         </button>
       </form>
 
-      <Link href={`/log/scan?meal=${meal}`} className={styles.scanLink}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          strokeLinecap="round" aria-hidden="true">
-          <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
-          <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
-          <line x1="13" y1="8" x2="13" y2="16" /><line x1="17" y1="8" x2="17" y2="16" />
-        </svg>
-        Scan a barcode
-      </Link>
+      <div className={styles.tools}>
+        <Link href={`/log/scan?meal=${meal}`} className={styles.scanLink}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" aria-hidden="true">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+            <line x1="7" y1="8" x2="7" y2="16" /><line x1="10" y1="8" x2="10" y2="16" />
+            <line x1="13" y1="8" x2="13" y2="16" /><line x1="17" y1="8" x2="17" y2="16" />
+          </svg>
+          Scan a barcode
+        </Link>
+        <Link href="/recipes" className={styles.scanLink}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z" />
+            <path d="M4 19.5V21h16" />
+          </svg>
+          Recipes
+        </Link>
+      </div>
+
+      {!q && <MyFoods meal={meal} tz={tz} added={added} />}
+      {q && (
+        <Link href={`/log?meal=${meal}`} className={styles.clear}>
+          ← Favorites and recent foods
+        </Link>
+      )}
 
       {q && results.length === 0 && packaged?.length === 0 && (
         <p className={styles.empty}>
@@ -105,7 +117,7 @@ export default async function LogPage({ searchParams }: Props) {
       )}
       {results.length > 0 && (
         <>
-          <p className={styles.hint}>Whole foods first</p>
+          <p className={styles.hint}>Your foods and whole foods first</p>
           <ul className={styles.results}>
             {results.map((f) => (
               <li key={f.id}>
@@ -117,7 +129,7 @@ export default async function LogPage({ searchParams }: Props) {
                       {Math.round(f.kcal_100g ?? 0)} kcal · {Math.round(f.protein_100g ?? 0)} g protein per 100 g
                     </span>
                   </span>
-                  <span className={styles.badge}>{SOURCE_BADGE[f.source] ?? "Food"}</span>
+                  <span className={styles.badge}>{f.recipe_id ? "Recipe" : (SOURCE_BADGE[f.source] ?? "Food")}</span>
                 </Link>
               </li>
             ))}
@@ -172,88 +184,102 @@ export default async function LogPage({ searchParams }: Props) {
   );
 }
 
-function Tabs({ meal, tab }: { meal: string; tab: "search" | "recent" }) {
+const DAY = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
+
+type Row = { food: FoodRow; grams: number; portionLabel: string | null };
+
+// Favorites, then everything logged in the last 7 days: one tap to add to
+// the chosen meal, and the page comes back here to add more.
+async function MyFoods({ meal, tz, added }: { meal: Meal; tz: string; added: string | null }) {
+  const [favs, recent] = await Promise.all([favorites(), recentWeek(tz)]);
+  const favIds = new Set(favs.map((f) => f.food.id));
+  const today = localNow(tz).date;
   return (
-    <nav aria-label="Find food" className={styles.tabs}>
-      <Link href={`/log?meal=${meal}`} aria-current={tab === "search" ? "page" : undefined}
-        className={tab === "search" ? styles.tabOn : styles.tab}>
-        Search
-      </Link>
-      <Link href={`/log?meal=${meal}&tab=recent`} aria-current={tab === "recent" ? "page" : undefined}
-        className={tab === "recent" ? styles.tabOn : styles.tab}>
-        Recent · 7 days
-      </Link>
-    </nav>
+    <>
+      {added && (
+        <p role="status" className={styles.added}>
+          Added {added} to {MEAL_LABEL[meal].toLowerCase()}. <Link href="/">Done</Link>
+        </p>
+      )}
+      <section aria-labelledby="favorites-heading" className={styles.section}>
+        <h2 id="favorites-heading" className={styles.hint}>
+          Favorites
+        </h2>
+        {favs.length === 0 ? (
+          <p className={styles.empty}>
+            Tap ☆ on a recent food, or &ldquo;Save as a favorite&rdquo; on any food, to keep it here with its
+            amount.
+          </p>
+        ) : (
+          <ul className={styles.results}>
+            {favs.map((f) => (
+              <FoodRowItem key={f.food.id} row={f} meal={meal} favorite detail={null} />
+            ))}
+          </ul>
+        )}
+      </section>
+      <section aria-labelledby="recent-heading" className={styles.section}>
+        <h2 id="recent-heading" className={styles.hint}>
+          Recent · last 7 days
+        </h2>
+        {recent.length === 0 ? (
+          <p className={styles.empty}>Nothing logged in the last 7 days yet. Search or scan to log something.</p>
+        ) : (
+          <ul className={styles.results}>
+            {recent.map((it) => {
+              const when =
+                it.localDate === today ? "today" : it.localDate ? DAY.format(new Date(it.localDate + "T12:00:00Z")) : "";
+              return (
+                <FoodRowItem
+                  key={`${it.food.id}:${it.grams}:${it.portionLabel ?? ""}`}
+                  row={it}
+                  meal={meal}
+                  favorite={favIds.has(it.food.id)}
+                  detail={`last ${when}${it.times > 1 ? ` · ${it.times}× this week` : ""}`}
+                />
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </>
   );
 }
 
-const DAY = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
-
-// Everything logged in the last 7 days, one tap to add to the chosen meal.
-async function Recent({ meal, tz, added }: { meal: (typeof MEALS)[number]; tz: string; added: string | null }) {
-  const items = await recentWeek(tz);
-  const today = localNow(tz).date;
+function FoodRowItem({ row, meal, favorite, detail }: { row: Row; meal: Meal; favorite: boolean; detail: string | null }) {
+  const amount = row.portionLabel ?? `${Math.round(row.grams)} g`;
+  const kcal = Math.round(forGrams(row.food, row.grams).kcal);
+  const short = row.food.name.split(",")[0];
+  const here = `/log?meal=${meal}`;
   return (
-    <main className={styles.main}>
-      <header className={styles.topbar}>
-        <Link href="/" aria-label="Back to today" className={styles.back}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </Link>
-        <h1 className={styles.title}>Add to {MEAL_LABEL[meal]}</h1>
-      </header>
-      <nav aria-label="Meal" className={styles.meals}>
-        {MEALS.map((m) => (
-          <Link key={m} href={`/log?meal=${m}&tab=recent`} aria-current={m === meal ? "true" : undefined}
-            className={m === meal ? styles.mealOn : styles.meal}>
-            {MEAL_LABEL[m]}
-          </Link>
-        ))}
-      </nav>
-      <Tabs meal={meal} tab="recent" />
-      {added && (
-        <p role="status" className={styles.added}>
-          Added {added} to {MEAL_LABEL[meal].toLowerCase()}.{" "}
-          <Link href="/">Done</Link>
-        </p>
-      )}
-      {items.length === 0 ? (
-        <p className={styles.empty}>Nothing logged in the last 7 days yet. Search or scan to log something.</p>
-      ) : (
-        <ul className={styles.results}>
-          {items.map((it) => {
-            const amount = it.portionLabel ?? `${Math.round(it.grams)} g`;
-            const kcal = Math.round(forGrams(it.food, it.grams).kcal);
-            const when = it.localDate === today ? "Today" : it.localDate ? DAY.format(new Date(it.localDate + "T12:00:00Z")) : "";
-            const short = it.food.name.split(",")[0];
-            return (
-              <li key={`${it.food.id}:${it.grams}:${it.portionLabel ?? ""}`} className={styles.recentRow}>
-                <Link href={`/log/food/${it.food.id}?meal=${meal}`} className={styles.recentText}
-                  aria-label={`${it.food.name}, ${amount}: choose a different amount`}>
-                  <span className={styles.resultName}>{it.food.name}</span>
-                  <span className={styles.resultMeta}>
-                    {amount} · {kcal} kcal · last {when}
-                    {it.times > 1 ? ` · ${it.times}× this week` : ""}
-                  </span>
-                </Link>
-                <form action={logFood}>
-                  <input type="hidden" name="food_id" value={it.food.id} />
-                  <input type="hidden" name="grams" value={it.grams} />
-                  <input type="hidden" name="meal" value={meal} />
-                  <input type="hidden" name="portion_label" value={it.portionLabel ?? ""} />
-                  <input type="hidden" name="back"
-                    value={`/log?meal=${meal}&tab=recent&added=${encodeURIComponent(`${short}, ${amount}`)}`} />
-                  <SubmitButton className={styles.addButton} aria-label={`Add ${it.food.name}, ${amount}`} pendingText="…">
-                    + Add
-                  </SubmitButton>
-                </form>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </main>
+    <li className={styles.recentRow}>
+      <Link href={`/log/food/${row.food.id}?meal=${meal}`} className={styles.recentText}
+        aria-label={`${row.food.name}, ${amount}: choose a different amount`}>
+        <span className={styles.resultName}>{row.food.name}</span>
+        <span className={styles.resultMeta}>
+          {amount} · {kcal} kcal{detail ? ` · ${detail}` : ""}
+        </span>
+      </Link>
+      <form action={favorite ? removeFavorite : saveFavorite}>
+        <input type="hidden" name="food_id" value={row.food.id} />
+        <input type="hidden" name="grams" value={row.grams} />
+        <input type="hidden" name="portion_label" value={row.portionLabel ?? ""} />
+        <input type="hidden" name="back" value={here} />
+        <button type="submit" className={styles.star} aria-pressed={favorite}
+          aria-label={favorite ? `Remove ${row.food.name} from favorites` : `Save ${row.food.name}, ${amount}, as a favorite`}>
+          {favorite ? "★" : "☆"}
+        </button>
+      </form>
+      <form action={logFood}>
+        <input type="hidden" name="food_id" value={row.food.id} />
+        <input type="hidden" name="grams" value={row.grams} />
+        <input type="hidden" name="meal" value={meal} />
+        <input type="hidden" name="portion_label" value={row.portionLabel ?? ""} />
+        <input type="hidden" name="back" value={`${here}&added=${encodeURIComponent(`${short}, ${amount}`)}`} />
+        <SubmitButton className={styles.addButton} aria-label={`Add ${row.food.name}, ${amount}`} pendingText="…">
+          + Add
+        </SubmitButton>
+      </form>
+    </li>
   );
 }

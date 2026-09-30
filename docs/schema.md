@@ -62,5 +62,8 @@ Liftosaur sync and rules engine tests.
 
 ## Not yet in the schema
 
-Recipes and shopping lists (Cook/Provisioner, later) and the homegrown workout
-tracker (later).
+Shopping lists (Provisioner) and the homegrown workout tracker (later).
+Recipes are in (`20261002000100_favorites_recipes.sql`): each recipe is backed
+by a custom food (`foods.recipe_id`), rebuilt from its ingredients by
+`recompute_recipe`. A recipe edited after it was logged moves to a new food,
+and the old one is retired, because logged food is scored from its food row.

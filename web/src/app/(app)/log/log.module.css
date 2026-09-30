@@ -215,41 +215,35 @@
   text-decoration: none;
 }
 
-/* Search / Recent tabs */
-.tabs {
+/* Scan and Recipes, under the search box */
+.tools {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
+  gap: 8px;
 }
 
-.tab,
-.tabOn {
-  min-height: 44px;
+.section {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sectionHead a {
+  font-size: 13px;
   font-weight: 600;
-  text-decoration: none;
-}
-
-.tab {
-  color: var(--ink);
-}
-
-.tabOn {
-  background: var(--ink);
-  color: var(--parchment);
 }
 
 .recentRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--divider);
+  gap: 6px;
+  padding: 6px 8px 6px 14px;
 }
 
 .recentText {
@@ -261,6 +255,20 @@
   justify-content: center;
   color: var(--ink);
   text-decoration: none;
+}
+
+.star {
+  width: 40px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.star[aria-pressed="true"] {
+  color: var(--gold);
 }
 
 .addButton {
@@ -283,6 +291,11 @@
   border-radius: 10px;
   background: var(--card);
   color: var(--green);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.clear {
   font-size: 14px;
   font-weight: 600;
 }

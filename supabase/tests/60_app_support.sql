@@ -179,4 +179,102 @@ do $$ begin
   end;
 end $$;
 
+-- Favorites: own rows only, one per food.
+insert into public.foods (source, source_id, name, kcal_100g, protein_100g, carbs_100g, fat_100g, fiber_100g)
+values ('usda_sr_legacy', 't-pasta', 'Test pasta, dry', 371, 13, 75, 1.5, 3.2);
+insert into public.food_nutrients (food_id, nutrient_id, amount_100g)
+select f.id, n.id, 10 from public.foods f, (select min(id) as id from public.nutrients where counts_for_int) n
+where f.source_id in ('t-egg', 't-pasta');
+set role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
+insert into public.food_favorites (food_id, grams, portion_label)
+values ((select id from public.foods where source_id = 't-egg'), 100, '2 large');
+do $$ begin
+  begin
+    insert into public.food_favorites (food_id, grams) values ((select id from public.foods where source_id = 't-egg'), 50);
+    assert false, 'one favorite per food';
+  exception when unique_violation then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', false);
+do $$ begin
+  assert not exists (select 1 from public.food_favorites), 'B doesn''t see A''s favorites';
+end $$;
+
+-- Recipes: totals from ingredients, by cooked weight, exact match first.
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', false);
+do $$
+declare
+  rid bigint;
+  f1 bigint;
+  f2 bigint;
+  egg bigint := (select id from public.foods where source_id = 't-egg');
+  pasta bigint := (select id from public.foods where source_id = 't-pasta');
+  ing bigint;
+begin
+  rid := public.create_recipe('  Parko High Protein Pasta ');
+  f1 := (select food_id from public.recipes where id = rid);
+  assert (select name from public.foods where id = f1) = 'Parko High Protein Pasta', 'the recipe has a food, trimmed';
+  assert (select retired_at is not null from public.foods where id = f1), 'an empty recipe is hidden from search';
+
+  perform public.add_recipe_ingredient(rid, pasta, 200, '2 cups');
+  perform public.add_recipe_ingredient(rid, egg, 100);
+  assert (select food_id from public.recipes where id = rid) = f1, 'an unlogged recipe keeps its food';
+  assert (select kcal_100g from public.foods where id = f1) = 295, 'kcal per 100 g over the ingredients'' 300 g';
+  assert (select protein_100g from public.foods where id = f1) = 12.87, 'protein per 100 g';
+  assert (select fiber_100g from public.foods where id = f1) = 2.13, 'fiber per 100 g';
+  assert (select amount_100g from public.food_nutrients where food_id = f1) = 10, 'micronutrients are summed too';
+  assert (select retired_at from public.foods where id = f1) is null, 'with ingredients it shows in search';
+  assert (select id from public.search_foods('parko high protein pasta') limit 1) = f1, 'an exact name match comes first';
+  assert (select id from public.search_foods('pasta') limit 1) = f1, 'your own recipes come before USDA';
+  assert (select id from public.search_foods('Test pasta, dry') limit 1) = pasta, 'an exact USDA match beats a recipe';
+
+  perform public.update_recipe(rid, 'Parko High Protein Pasta', 600, 4);
+  assert (select kcal_100g from public.foods where id = f1) = 147.5, 'the cooked weight sets the density';
+  assert (select grams from public.food_portions where food_id = f1 and label = '1 serving') = 150, 'a serving is a quarter';
+  assert (select grams from public.food_portions where food_id = f1 and label = 'whole recipe') = 600, 'and the whole pot';
+
+  insert into public.food_favorites (food_id, grams, portion_label) values (f1, 150, '1 serving');
+  perform public.log_food(f1, 150, 'lunch');
+  select id into ing from public.recipe_ingredients where recipe_id = rid and food_id = egg;
+  perform public.update_recipe_ingredient(ing, 200);
+  f2 := (select food_id from public.recipes where id = rid);
+  assert f2 <> f1, 'editing a logged recipe moves it to a new food';
+  assert (select kcal_100g from public.foods where id = f1) = 147.5, 'the logged version keeps its values';
+  assert (select retired_at is not null from public.foods where id = f1), 'and leaves search';
+  assert (select kcal_100g from public.foods where id = f2) = 171.33, 'the new version has the new egg amount';
+  assert (select count(*) from public.foods where recipe_id = rid) = 2, 'both versions point at the recipe';
+  assert (select food_id from public.food_favorites where portion_label = '1 serving') = f2, 'the favorite follows the recipe';
+
+  begin
+    perform public.add_recipe_ingredient(rid, f2, 50);
+    assert false, 'a recipe can''t be its own ingredient';
+  exception when raise_exception then null;
+  end;
+
+  perform public.remove_recipe_ingredient(ing);
+  assert (select count(*) from public.recipe_ingredients where recipe_id = rid) = 1, 'removed';
+
+  perform public.delete_recipe(rid);
+  assert (select retired_at is not null from public.foods where id = f2), 'a deleted recipe leaves search';
+  assert not exists (select 1 from public.food_favorites where food_id = f2), 'and favorites';
+  assert (select count(*) from public.food_log where food_id = f1) = 1, 'logged entries keep it';
+end $$;
+
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', false);
+do $$ begin
+  assert not exists (select 1 from public.recipes), 'B can''t see A''s recipes';
+  begin
+    perform public.add_recipe_ingredient(1, (select id from public.foods where source_id = 't-egg'), 10);
+    assert false, 'B can''t add to A''s recipe';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.update_recipe(1, 'Stolen', null, null);
+    assert false, 'B can''t rename A''s recipe';
+  exception when raise_exception then null;
+  end;
+end $$;
+reset role;
+
 select 'all app support tests passed' as result;

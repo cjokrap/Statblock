@@ -40,35 +40,6 @@
   color: var(--muted);
 }
 
-.recents {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.recentsLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.chip {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--card);
-  color: var(--ink);
-  font-size: 13px;
-  cursor: pointer;
-}
-
 .meals {
   background: var(--card);
   border: 1px solid var(--border);
